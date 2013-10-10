@@ -1,5 +1,6 @@
 import logging; logger = logging.getLogger("MinimalKB");
-DEBUG_LEVEL=logging.DEBUG
+
+DEBUG_LEVEL=logging.INFO
 
 import asyncore, asynchat
 import os, socket, string
