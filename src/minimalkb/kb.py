@@ -70,12 +70,12 @@ class SQLStore:
             else:
                 # intersection with previous candidates
                 candidates = candidates & self.simplequery(p)
-            logger.info("Pattern " + p +" -> candidates are: " + str(list(candidates)))
 
         if not candidates:
             return []
 
         #now, filter out!
+        #TODO!
         return list(candidates)
 
     def simplequery(self, pattern):

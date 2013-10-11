@@ -93,9 +93,11 @@ class MinimalKBServer(asyncore.dispatcher):
 
 if __name__ == '__main__':
 
-    console = logging.StreamHandler()
+    from ansistrm import ColorizingStreamHandler
+
+    console = ColorizingStreamHandler()
     logger.setLevel(DEBUG_LEVEL)
-    formatter = logging.Formatter('%(asctime)-15s %(name)s: %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)-15s: %(message)s')
     console.setFormatter(formatter)
     logger.addHandler(console)
 
