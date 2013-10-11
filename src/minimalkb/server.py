@@ -9,7 +9,7 @@ import traceback
 
 import json
 
-from kb import MinimalKB
+from kb import MinimalKB, KbServerError
 
 PORT = 6969
 
@@ -42,6 +42,12 @@ class MinimalKBChannel(asynchat.async_chat):
         logger.debug("Got request " + request + "(" + ", ".join(args) + ")")
         try:
             res = self.kb.execute(request, *args)
+        except KbServerError as e:
+            logger.error("Request failed: %s" % e)
+            self.push("error\n")
+            self.push("KbServerError\n")
+            self.push(str(e) + "\n")
+            self.push("#end#\n")
         except NotImplementedError as nie:
             msg = str(nie)
             logger.error("Request failed: " + msg)
