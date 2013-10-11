@@ -1,4 +1,4 @@
-import logging; logger = logging.getLogger("MinimalKB."+__name__);
+import logging; logger = logging.getLogger("minimalKB."+__name__);
 DEBUG_LEVEL=logging.DEBUG
 
 import shlex

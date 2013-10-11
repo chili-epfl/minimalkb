@@ -15,3 +15,12 @@ simple.
 
 Written in Python. The only dependency is sqlite3.
 
+Installation
+------------
+
+```
+$ git clone https://github.com/severin-lemaignan/minimalkb.git
+$ cd minimalkb
+$ python setup.py install
+$ minimalkb
+```
