@@ -10,6 +10,11 @@ def api(fn):
     fn._api = True
     return fn
 
+def compat(fn):
+    fn._compat = True
+    return fn
+
+
 class SQLStore:
 
     def __init__(self):
@@ -105,8 +110,10 @@ class MinimalKB:
 
         self.models = {"myself"}
 
-        logger.info("Initializing the MinimalKB with the following API: " + \
-                ", ".join(self.api.keys()))
+        apilist = [key + (" (compatibility)" if hasattr(val, "_compat") else "") for key, val in self.api.items()]
+
+        logger.info("Initializing the MinimalKB with the following API: \n\t- " + \
+                "\n\t- ".join(apilist))
 
     @api
     def load(self, filename):
@@ -145,6 +152,7 @@ class MinimalKB:
                 self.store.delete(stmts, model)
 
 
+    @compat
     @api
     def findForAgent(self, agent, var, stmts):
         return self.find([var], stmts, None, [agent])
@@ -164,6 +172,13 @@ class MinimalKB:
         
         logger.info("Found: " + str(res))
         return res
+
+    @api
+    def findmpe(self, vars, pattern, constraints = None, models = None):
+        """ Finds the most probable explanation. Strictly equivalent to
+        'find' until we support probabilities.
+        """
+        return find(self, vars, pattern, constraints = None, models = None)
 
     def execute(self, name, *args):
         f = getattr(self, name)

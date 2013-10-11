@@ -104,5 +104,5 @@ if __name__ == '__main__':
         kb.load(sys.argv[1])
 
     s = MinimalKBServer(PORT, kb)
-    print "serving at port", PORT, "..."
+    logger.info("Starting to serve at port %d..." % PORT)
     asyncore.loop()
