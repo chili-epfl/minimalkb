@@ -100,6 +100,9 @@ if __name__ == '__main__':
     logger.addHandler(console)
 
     kb = MinimalKB()
+    if len(sys.argv) == 2:
+        kb.load(sys.argv[1])
+
     s = MinimalKBServer(PORT, kb)
     print "serving at port", PORT, "..."
     asyncore.loop()

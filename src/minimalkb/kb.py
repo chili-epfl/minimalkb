@@ -109,6 +109,12 @@ class MinimalKB:
                 ", ".join(self.api.keys()))
 
     @api
+    def load(self, filename):
+        logger.info("Loading triples from %s" % filename)
+        with open(filename, 'r') as triples:
+            self.store.add([s.strip() for s in triples.readlines()])
+
+    @api
     def listSimpleMethods(self):
         return self.api.keys()
 
