@@ -1,9 +1,11 @@
 import logging; logger = logging.getLogger("MinimalKB");
 
-DEBUG_LEVEL=logging.INFO
+DEBUG_LEVEL=logging.DEBUG
 
+import sys
 import asyncore, asynchat
 import os, socket, string
+import traceback
 
 import json
 
@@ -40,7 +42,15 @@ class MinimalKBChannel(asynchat.async_chat):
         logger.debug("Got request " + request + "(" + ", ".join(args) + ")")
         try:
             res = self.kb.execute(request, *args)
+        except NotImplementedError as nie:
+            msg = str(nie)
+            logger.error("Request failed: " + msg)
+            self.push("error\n")
+            self.push("NotImplementedError\n")
+            self.push(msg + "\n")
+            self.push("#end#\n")
         except AttributeError:
+            traceback.print_exc()
             msg = "Method " + request + " is not implemented."
             logger.error("Request failed: " + msg)
             self.push("error\n")
@@ -48,6 +58,7 @@ class MinimalKBChannel(asynchat.async_chat):
             self.push(msg + "\n")
             self.push("#end#\n")
         except TypeError:
+            traceback.print_exc()
             msg = "Method " + request + " is not implemented " + \
                   "with these arguments: " + str(args) + "."
             logger.error("Request failed: " + msg)
@@ -60,7 +71,7 @@ class MinimalKBChannel(asynchat.async_chat):
 
         logger.debug("Returned " + str(res))
         self.push("ok\n")
-        if res:
+        if res is not None:
             self.push(json.dumps(res))
         self.push("\n#end#\n")
 
