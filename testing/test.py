@@ -1,4 +1,6 @@
+import logging
 import unittest
+import time
 import kb
 
 class TestSequenceFunctions(unittest.TestCase):
@@ -10,12 +12,23 @@ class TestSequenceFunctions(unittest.TestCase):
     def tearDown(self):
         self.kb.close()
 
+    def test_basics(self):
+
+        self.kb.hello()
+
+        with self.assertRaises(kb.KbServerError):
+            self.kb.add()
+        with self.assertRaises(kb.KbServerError):
+            self.kb.add("toto")
+
+
     def test_modifications(self):
 
         # check no exception is raised
-        self.kb += ["johnny rdf:type Human", "johnny rdfs:label \"A que Johnny\""]
+        self.kb.add(["johnny rdf:type Human", "johnny rdfs:label \"A que Johnny\""])
         self.kb += ["alfred rdf:type Human", "alfred likes icecream"]
-        self.kb -= ["alfred rdf:type Human", "alfred likes icecream"]
+        self.kb.retract(["alfred rdf:type Human", "alfred likes icecream"])
+        self.kb -= ["johnny rdf:type Human"]
 
     def test_retrieval(self):
 
@@ -48,6 +61,29 @@ class TestSequenceFunctions(unittest.TestCase):
         self.assertFalse('alfred likes icecream' in self.kb)
         self.assertFalse('alfred' in self.kb)
 
+    def _test_events(self):
+
+        eventtriggered = False
+
+        def onevent(evt):
+            eventtriggered = True
+
+        self.kb.subscribe(["?o isIn room"], onevent)
+
+        self.kb += ["alfred isIn room"]
+
+        time.sleep(1)
+
+        self.assertTrue(eventtriggered)
+
+        self.kb.methods()
+
 
 if __name__ == '__main__':
+
+    kblogger = logging.getLogger("kb")
+    console = logging.StreamHandler()
+    kblogger.setLevel(logging.DEBUG)
+    kblogger.addHandler(console)
+    
     unittest.main()

@@ -23,7 +23,6 @@ class MinimalKBChannel(asynchat.async_chat):
         self.set_terminator("#end#")
         self.request = None
         self.data = ""
-        self.shutdown = 0
 
         self.kb = kb
 
@@ -32,17 +31,17 @@ class MinimalKBChannel(asynchat.async_chat):
         if len(tokens) == 1:
             return tokens[0], []
         else:
-            return tokens[0], tokens[1:]
+            return tokens[0], [json.loads(t) for t in tokens[1:]]
 
     def collect_incoming_data(self, data):
         self.data = self.data + data
 
     def found_terminator(self):
 
-        res = None
+        res, events = None, None
         request, args = self.parse_request(self.data)
         self.data = ""
-        logger.debug("Got request " + request + "(" + ", ".join(args) + ")")
+        logger.debug("Got request " + request + "(" + ", ".join([str(a) for a in args]) + ")")
         try:
             res = self.kb.execute(request, *args)
         except KbServerError as e:
@@ -83,6 +82,15 @@ class MinimalKBChannel(asynchat.async_chat):
         if res is not None:
             self.push(json.dumps(res))
         self.push("\n#end#\n")
+
+        for e in self.kb.triggered_evts:
+            logger.debug("Notifying event %s" % e.id)
+            self.push("event\n")
+            self.push(e.id + "\n")
+            self.push(json.dumps(e.content))
+            self.push("\n#end#\n")
+        self.kb.triggered_evts = []
+
 
 class MinimalKBServer(asyncore.dispatcher):
 

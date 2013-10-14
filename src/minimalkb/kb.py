@@ -2,7 +2,6 @@ import logging; logger = logging.getLogger("minimalKB."+__name__);
 DEBUG_LEVEL=logging.DEBUG
 
 import shlex
-import ast
 import traceback
 
 from sqlite_store import SQLStore
@@ -21,6 +20,37 @@ class KbServerError(Exception):
     def __str__(self):
         return repr(self.value)
 
+class Event:
+    def __init__(self, type, trigger, var, patterns, models):
+        self.type = type
+        self.trigger = trigger
+        self.var = var
+        self.patterns = patterns
+        self.models = models
+
+        self.id =  "evt_" + str(hash(self.type + \
+                    self.trigger + \
+                    self.var + \
+                    str(sorted(self.patterns)) + \
+                    str(sorted(self.models))))
+
+        self.content = None
+
+        self.valid = True
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __cmp__(self, other):
+        return hash(self).__cmp__(hash(other))
+
+    def evaluate(self):
+        if "ONE_SHOT" in self.trigger:
+            self.valid = False
+        return True
+
+
+
 class MinimalKB:
 
     MEMORYPROFILE_DEFAULT = ""
@@ -38,6 +68,13 @@ class MinimalKB:
 
         logger.info("Initializing the MinimalKB with the following API: \n\t- " + \
                 "\n\t- ".join(apilist))
+
+        self.active_evts = set()
+        self.triggered_evts = []
+
+    @api
+    def hello(self):
+        return "MinimalKB, v.0.1"
 
     @api
     def load(self, filename):
@@ -76,7 +113,6 @@ class MinimalKB:
 
     @api
     def exist(self, stmts, models = None):
-        stmts = self.parse_stmts(stmts)
         logger.info("Checking existence of " + str(stmts) + \
                     " in " + (str(models) if models else "any model."))
         return self.store.has(stmts,
@@ -85,11 +121,8 @@ class MinimalKB:
     @api
     def revise(self, stmts, policy):
 
-        stmts = self.parse_stmts(stmts)
-        
         if type(policy) != dict:
-            policy= ast.literal_eval(policy)
-
+            raise KbServerError("Expected a dictionary as policy")
         models = self.normalize_models(policy.get('models', []))
 
         if policy["method"] in ["add", "safe_add"]:
@@ -101,6 +134,8 @@ class MinimalKB:
             logger.info("Deleting from " + str(list(models)) +":\n\t- " + "\n\t- ".join(stmts))
             for model in models:
                 self.store.delete(stmts, model)
+
+        self.onupdate()
 
     @api
     def add(self, stmts, models = None):
@@ -122,9 +157,6 @@ class MinimalKB:
     @api
     def find(self, vars, pattern, constraints = None, models = None):
 
-        vars = ast.literal_eval(vars)
-        pattern = self.parse_stmts(pattern)
-
         if not models:
             models = self.models
 
@@ -144,11 +176,28 @@ class MinimalKB:
         """
         return find(self, vars, pattern, constraints = None, models = None)
 
-    def parse_stmts(seld, stmts):
-        try:
-            return ast.literal_eval(stmts)
-        except ValueError as e:
-            raise KbServerError("Unable to parse the statements! %s" % e)
+    @api
+    def subscribe(self, type, trigger, var, patterns, models = None):
+
+        models = self.normalize_models(models)
+
+        logger.info("Registering a new event: %s %s for %s on %s" % (type, trigger, var, patterns) + \
+                    " in " + (str(models) if models else "any model."))
+
+        event = Event(type, trigger, var, patterns, models)
+
+        self.active_evts.add(event)
+
+        return event.id
+
+    def onupdate(self):
+        for e in self.active_evts:
+            if e.evaluate():
+                logger.info("Event %s triggered." % e.id)
+                self.triggered_evts.append(e)
+                if not e.valid:
+                    self.active_evts.discard(e)
+
 
     def normalize_models(self, models):
         """ If 'models' is None, [] or contains 'all', then
