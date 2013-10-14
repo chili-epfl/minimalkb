@@ -50,6 +50,7 @@ class MinimalKBChannel(asynchat.async_chat):
             self.push("KbServerError\n")
             self.push(str(e) + "\n")
             self.push("#end#\n")
+            return
         except NotImplementedError as nie:
             msg = str(nie)
             logger.error("Request failed: " + msg)
@@ -57,6 +58,7 @@ class MinimalKBChannel(asynchat.async_chat):
             self.push("NotImplementedError\n")
             self.push(msg + "\n")
             self.push("#end#\n")
+            return
         except AttributeError:
             traceback.print_exc()
             msg = "Method " + request + " is not implemented."
@@ -65,6 +67,7 @@ class MinimalKBChannel(asynchat.async_chat):
             self.push("AttributeError\n")
             self.push(msg + "\n")
             self.push("#end#\n")
+            return
         except TypeError:
             traceback.print_exc()
             msg = "Method " + request + " is not implemented " + \
@@ -74,6 +77,7 @@ class MinimalKBChannel(asynchat.async_chat):
             self.push("TypeError\n")
             self.push(msg + "\n")
             self.push("#end#\n")
+            return
 
 
 

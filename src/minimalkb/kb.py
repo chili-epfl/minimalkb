@@ -121,6 +121,9 @@ class MinimalKB:
     @api
     def revise(self, stmts, policy):
 
+        if isinstance(stmts, (str, unicode)):
+            raise KbServerError("A list of statements is expected")
+
         if type(policy) != dict:
             raise KbServerError("Expected a dictionary as policy")
         models = self.normalize_models(policy.get('models', []))

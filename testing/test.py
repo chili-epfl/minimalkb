@@ -16,9 +16,9 @@ class TestSequenceFunctions(unittest.TestCase):
 
         self.kb.hello()
 
-        with self.assertRaises(kb.KbServerError):
+        with self.assertRaises(kb.KbError):
             self.kb.add()
-        with self.assertRaises(kb.KbServerError):
+        with self.assertRaises(kb.KbError):
             self.kb.add("toto")
 
 
