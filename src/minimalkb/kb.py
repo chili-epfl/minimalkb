@@ -83,7 +83,7 @@ class MinimalKB:
 
         self.store = SQLStore()
 
-        self.models = {"default"}
+        self.models = {"myself"}
 
         apilist = [key + (" (compatibility)" if hasattr(val, "_compat") else "") for key, val in self._api.items()]
 
