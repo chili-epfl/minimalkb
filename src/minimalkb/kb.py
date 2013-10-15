@@ -245,8 +245,8 @@ class MinimalKB:
     def execute(self, name, *args):
         f = getattr(self, name)
         if hasattr(f, "_compat"):
-                logger.warn("Using non-standard method %s. This may be " + \
-                        "removed in the future!" % f.__name__)
+                logger.warn("Using non-standard method %s. This may be " % f.__name__ + \
+                        "removed in the future!")
         try:
             return f(*args)
         except TypeError:

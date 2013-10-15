@@ -31,7 +31,13 @@ class MinimalKBChannel(asynchat.async_chat):
         if len(tokens) == 1:
             return tokens[0], []
         else:
-            return tokens[0], [json.loads(t) for t in tokens[1:]]
+            args = []
+            for t in tokens[1:]:
+                try:
+                    args.append(json.loads(t))
+                except ValueError:
+                    logger.error("Invalid arguments for <%s>: %s. Valid JSON was expected."%(tokens[0], t))
+            return tokens[0], args
 
     def collect_incoming_data(self, data):
         self.data = self.data + data
