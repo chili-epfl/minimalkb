@@ -3,6 +3,8 @@ import unittest
 import time
 import kb
 
+from Queue import Empty
+
 class TestSequenceFunctions(unittest.TestCase):
 
     def setUp(self):
@@ -66,7 +68,7 @@ class TestSequenceFunctions(unittest.TestCase):
         eventtriggered = [False]
 
         def onevent(evt):
-            #py3 only!
+            #py3 only! -> workaround is turning eventtriggered into a list
             #nonlocal eventtriggered
             print("In callback. Got evt %s" % evt)
             eventtriggered[0] = True
@@ -75,36 +77,84 @@ class TestSequenceFunctions(unittest.TestCase):
 
         # should not trigger an event
         self.kb += ["alfred isIn garage"]
-        time.sleep(0.5)
+        time.sleep(0.1)
         self.assertFalse(eventtriggered[0])
 
 
         # should trigger an event
         self.kb += ["alfred isIn room"]
-        time.sleep(0.5)
+        time.sleep(0.1)
         self.assertTrue(eventtriggered[0])
 
         eventtriggered[0] = False
 
         # should not trigger an event
         self.kb += ["alfred leaves room"]
-        time.sleep(0.5)
+        time.sleep(0.1)
         self.assertFalse(eventtriggered[0])
 
         # alfred is already in garage, should not fire an event
         self.kb.subscribe(["?o isIn garage"], onevent)
-        time.sleep(0.5)
+        time.sleep(0.1)
         self.assertFalse(eventtriggered[0])
 
         # alfred is already in garage, should not fire an event
         self.kb += ["alfred isIn garage"]
-        time.sleep(0.5)
+        time.sleep(0.1)
         self.assertFalse(eventtriggered[0])
 
         self.kb += ["batman isIn garage"]
-        time.sleep(0.5)
+        time.sleep(0.1)
         self.assertTrue(eventtriggered[0])
 
+    def test_polled_events(self):
+
+        evtid = self.kb.subscribe(["?o isIn room"])
+
+        # should not trigger an event
+        self.kb += ["alfred isIn garage"]
+        time.sleep(0.1)
+
+        with self.assertRaises(Empty):
+            self.kb.events.get_nowait()
+
+        # should trigger an event
+        self.kb += ["alfred isIn room"]
+        time.sleep(0.1)
+
+        id, value = self.kb.events.get_nowait()
+        self.assertEqual(id, evtid)
+        self.assertItemsEqual(value, [u"alfred"])
+
+        # should not trigger an event
+        self.kb += ["alfred leaves room"]
+        time.sleep(0.1)
+
+        with self.assertRaises(Empty):
+            self.kb.events.get_nowait()
+
+
+        # alfred is already in garage, should not fire an event
+        evtid = self.kb.subscribe(["?o isIn garage"])
+        time.sleep(0.1)
+
+        with self.assertRaises(Empty):
+            self.kb.events.get_nowait()
+
+        # alfred is already in garage, should not fire an event
+        self.kb += ["alfred isIn garage"]
+        time.sleep(0.1)
+
+        with self.assertRaises(Empty):
+            self.kb.events.get_nowait()
+
+
+        self.kb += ["batman isIn garage"]
+        time.sleep(0.1)
+
+        id, value = self.kb.events.get_nowait()
+        self.assertEqual(id, evtid)
+        self.assertItemsEqual(value, [u"batman"])
 
 
 
