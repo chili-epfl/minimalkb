@@ -61,22 +61,51 @@ class TestSequenceFunctions(unittest.TestCase):
         self.assertFalse('alfred likes icecream' in self.kb)
         self.assertFalse('alfred' in self.kb)
 
-    def _test_events(self):
+    def test_events(self):
 
-        eventtriggered = False
+        eventtriggered = [False]
 
         def onevent(evt):
-            eventtriggered = True
+            #py3 only!
+            #nonlocal eventtriggered
+            print("In callback. Got evt %s" % evt)
+            eventtriggered[0] = True
 
         self.kb.subscribe(["?o isIn room"], onevent)
 
+        # should not trigger an event
+        self.kb += ["alfred isIn garage"]
+        time.sleep(0.5)
+        self.assertFalse(eventtriggered[0])
+
+
+        # should trigger an event
         self.kb += ["alfred isIn room"]
+        time.sleep(0.5)
+        self.assertTrue(eventtriggered[0])
 
-        time.sleep(1)
+        eventtriggered[0] = False
 
-        self.assertTrue(eventtriggered)
+        # should not trigger an event
+        self.kb += ["alfred leaves room"]
+        time.sleep(0.5)
+        self.assertFalse(eventtriggered[0])
 
-        self.kb.methods()
+        # alfred is already in garage, should not fire an event
+        self.kb.subscribe(["?o isIn garage"], onevent)
+        time.sleep(0.5)
+        self.assertFalse(eventtriggered[0])
+
+        # alfred is already in garage, should not fire an event
+        self.kb += ["alfred isIn garage"]
+        time.sleep(0.5)
+        self.assertFalse(eventtriggered[0])
+
+        self.kb += ["batman isIn garage"]
+        time.sleep(0.5)
+        self.assertTrue(eventtriggered[0])
+
+
 
 
 if __name__ == '__main__':
