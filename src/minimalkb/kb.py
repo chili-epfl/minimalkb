@@ -107,6 +107,7 @@ class MinimalKB:
     def clear(self):
         logger.warn("Clearing the knowledge base!")
         self.store.clear()
+        self.active_evts.clear()
 
     @compat
     @api
