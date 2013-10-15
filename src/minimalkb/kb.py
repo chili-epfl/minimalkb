@@ -21,7 +21,12 @@ class KbServerError(Exception):
         return repr(self.value)
 
 class Event:
-    def __init__(self, type, trigger, var, patterns, models):
+
+    NEW_INSTANCE = "NEW_INSTANCE"
+    NEW_INSTANCE_ONE_SHOT = "NEW_INSTANCE_ONE_SHOT"
+
+    def __init__(self, kb, type, trigger, var, patterns, models):
+        self.kb = kb
         self.type = type
         self.trigger = trigger
         self.var = var
@@ -38,6 +43,12 @@ class Event:
 
         self.valid = True
 
+        self.previous_instances = set()
+        if type in [Event.NEW_INSTANCE, Event.NEW_INSTANCE_ONE_SHOT]:
+            instances = self.kb.find([var], patterns, None, models)
+            logger.debug("Creating a NEW_INSTANCE event with initial instances %s"%instances)
+            self.previous_instances = set(instances)
+
     def __hash__(self):
         return hash(self.id)
 
@@ -47,7 +58,17 @@ class Event:
     def evaluate(self):
         if "ONE_SHOT" in self.trigger:
             self.valid = False
-        return True
+
+        if self.type in [Event.NEW_INSTANCE, Event.NEW_INSTANCE_ONE_SHOT]:
+            instances = set(self.kb.find([self.var], self.patterns, None, self.models))
+            newinstances = instances - self.previous_instances
+        
+            if not newinstances:
+                return False
+
+            self.content = [i for i in newinstances] # for some reason, calling list() does not work
+            self.previous_instances = self.previous_instances | instances
+            return True
 
 
 
@@ -187,7 +208,7 @@ class MinimalKB:
         logger.info("Registering a new event: %s %s for %s on %s" % (type, trigger, var, patterns) + \
                     " in " + (str(models) if models else "any model."))
 
-        event = Event(type, trigger, var, patterns, models)
+        event = Event(self, type, trigger, var, patterns, models)
 
         self.active_evts.add(event)
 
