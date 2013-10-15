@@ -247,9 +247,9 @@ class MinimalKB:
         if hasattr(f, "_compat"):
                 logger.warn("Using non-standard method %s. This may be " % f.__name__ + \
                         "removed in the future!")
-        try:
+        
+        if args:
             return f(*args)
-        except TypeError:
-            traceback.print_exc()
+        else:
             return f()
 

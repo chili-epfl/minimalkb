@@ -45,47 +45,20 @@ class MinimalKBChannel(asynchat.async_chat):
     def found_terminator(self):
 
         res, events = None, None
+        logger.debug("Got request:" + self.data )
         request, args = self.parse_request(self.data)
         self.data = ""
-        logger.debug("Got request " + request + "(" + ", ".join([str(a) for a in args]) + ")")
         try:
             res = self.kb.execute(request, *args)
-        except KbServerError as e:
+        except Exception as e:
+            if logger.level == logging.DEBUG:
+                traceback.print_exc()
             logger.error("Request failed: %s" % e)
             self.push("error\n")
-            self.push("KbServerError\n")
+            self.push("KbError\n")
             self.push(str(e) + "\n")
             self.push("#end#\n")
             return
-        except NotImplementedError as nie:
-            msg = str(nie)
-            logger.error("Request failed: " + msg)
-            self.push("error\n")
-            self.push("NotImplementedError\n")
-            self.push(msg + "\n")
-            self.push("#end#\n")
-            return
-        except AttributeError:
-            traceback.print_exc()
-            msg = "Method " + request + " is not implemented."
-            logger.error("Request failed: " + msg)
-            self.push("error\n")
-            self.push("AttributeError\n")
-            self.push(msg + "\n")
-            self.push("#end#\n")
-            return
-        except TypeError:
-            traceback.print_exc()
-            msg = "Method " + request + " is not implemented " + \
-                  "with these arguments: " + str(args) + "."
-            logger.error("Request failed: " + msg)
-            self.push("error\n")
-            self.push("TypeError\n")
-            self.push(msg + "\n")
-            self.push("#end#\n")
-            return
-
-
 
         logger.debug("Returned " + str(res))
         self.push("ok\n")
