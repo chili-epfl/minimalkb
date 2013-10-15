@@ -80,7 +80,7 @@ class SQLStore:
         if len(patterns) == 1:
             return list(self.simplequery(patterns[0]))
 
-        independentpatterns = {p for p in patterns if nb_variables(p) == 1}
+        independentpatterns = {p for p in patterns if self.nb_variables(p) == 1}
         directpatterns = {p for p in patterns if vars[0] in p}
 
         # first, execute simple queries to determine potential candidates:
