@@ -111,6 +111,11 @@ class MinimalKB:
 
     @compat
     @api
+    def reset(self):
+        self.clear()
+
+    @compat
+    @api
     def listSimpleMethods(self):
         return self.methods()
 
@@ -132,6 +137,11 @@ class MinimalKB:
             return []
 
         return [(resource, "unknown")]
+
+    @api
+    def check(self, *args):
+        logger.warn("'check' has been invoked, but no classification supported. Returning always True.")
+        return True
 
     @api
     def exist(self, stmts, models = None):
@@ -160,6 +170,12 @@ class MinimalKB:
             for model in models:
                 self.store.delete(stmts, model)
 
+        if policy["method"] in ["update", "safe_update", "revision"]:
+            logger.info("Updating " + str(list(models)) + " with:\n\t- " + "\n\t- ".join(stmts))
+            for model in models:
+                self.store.update(stmts, model)
+
+
         self.onupdate()
 
     @api
@@ -168,11 +184,34 @@ class MinimalKB:
                            {"method": "add",
                             "models": models})
 
+    @compat
+    @api
+    def addForAgent(self, agent, stmts):
+        return self.add(stmts, [agent])
+
     @api
     def retract(self, stmts, models = None):
         return self.revise(stmts,
                            {"method": "retract",
                             "models": models})
+
+    @compat
+    @api
+    def remove(self, stmts, models = None):
+        return self.retract(stmts, models)
+
+    @compat
+    @api
+    def removeForAgent(self, agent, stmts):
+        return self.retract(stmts, [agent])
+
+
+    @api
+    def update(self, stmts, models = None):
+        return self.revise(stmts,
+                           {"method": "update",
+                            "models": models})
+
 
     @compat
     @api
@@ -215,6 +254,42 @@ class MinimalKB:
 
         return event.id
 
+    @compat
+    @api
+    def discriminateForAgent(self, *args):
+        raise NotImplementedError('discriminateForAgent not implemented in MinimalKB')
+
+    @compat
+    @api
+    def getLabel(self, concept):
+        res = self.store.query(["?label"], ["%s rdfs:label ?label" % concept], self.models)
+        if not res:
+            logger.info("Found no label for %s" % concept)
+            return concept
+        else:
+            logger.info("Found label %s for %s" % (res[0], concept))
+            return res[0]
+
+    
+    @compat
+    @api
+    def getDirectClassesOf(self, concept):
+        return self.getClassesOf(concept, True)
+
+    @compat
+    @api
+    def getClassesOf(self, concept, direct = False):
+        classes = self.classesof(concept, direct)
+
+        return {cls : self.getLabel(cls) for cls in classes}
+
+    @api
+    def classesof(self, concept, direct = False, models = None):
+        models = self.normalize_models(models)
+        return self.store.classesof(concept, direct, models)
+
+    ################################################################################
+    ################################################################################
     def onupdate(self):
         for e in self.active_evts:
             if e.evaluate():

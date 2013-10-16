@@ -45,6 +45,13 @@ class SQLStore:
             self.conn.executemany('''DELETE FROM triples 
                         WHERE (hash=?)''', hashes)
 
+    def update(self, stmts, model = "default"):
+
+        logger.warn("With SQLite store, update is strictly equivalent to " + \
+                    "add (ie, no functional property check")
+
+        self.add(stmts, model)
+
     def about(self, resource, models):
         with self.conn:
             res = self.conn.execute('''
@@ -113,7 +120,11 @@ class SQLStore:
 
         return False
  
-
+    def classesof(self, concept, direct, models):
+        logger.warn("Only returning asserted classes of %s" % concept)
+        return list(self.simplequery("%s rdf:type *" % concept, models))
+    
+    ###################################################################################
     def simplequery(self, pattern, models = []):
 
         def is_variable(s):

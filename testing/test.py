@@ -156,6 +156,25 @@ class TestSequenceFunctions(unittest.TestCase):
         self.assertEqual(id, evtid)
         self.assertItemsEqual(value, [u"batman"])
 
+    def test_taxonomy_walking(self):
+
+        self.assertFalse(self.kb.classesof("john"))
+        self.kb += ["john rdf:type Human"]
+        self.assertItemsEqual(self.kb.classesof("john"), [u'Human'])
+        self.kb += ["john rdf:type Genius"]
+        self.assertItemsEqual(self.kb.classesof("john"), [u'Human', u'Genius'])
+        self.kb -= ["john rdf:type Human"]
+        self.assertItemsEqual(self.kb.classesof("john"), [u'Genius'])
+
+    def test_taxonomy_walking_inheritance(self):
+
+        self.kb += ["john rdf:type Human"]
+        self.assertItemsEqual(self.kb.classesof("john"), [u'Human'])
+        self.kb += ["Human rdfs:subClassOf Animal"]
+        self.assertItemsEqual(self.kb.classesof("john"), [u'Human', u'Animal'])
+        self.assertItemsEqual(self.kb.classesof("john", direct=True), [u'Human'])
+        self.kb -= ["john rdf:type Human"]
+        self.assertFalse(self.kb.classesof("john"))
 
 
 if __name__ == '__main__':
