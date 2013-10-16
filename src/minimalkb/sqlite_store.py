@@ -107,7 +107,6 @@ class SQLStore:
         #TODO!
         return list(candidates)
 
-
     def has_stmt(self, pattern, models):
         """ Returns True if the given statment exist in
         *any* of the provided models.
@@ -134,8 +133,11 @@ class SQLStore:
         params = {'s':s,
                   'p':p,
                   'o':o,
-                  'models': ','.join(models)
                  }
+        # workaround to feed a variable number of models
+        models = list(models)
+        for i in range(len(models)):
+            params["m%s"%i] = models[i]
 
         query = "SELECT "
         if is_variable(s):
@@ -148,7 +150,7 @@ class SQLStore:
             query += "hash FROM triples WHERE (subject=:s AND predicate=:p AND object=:o)"
 
         if models:
-            query += " AND model IN (:models)"
+            query += " AND model IN (%s)" % (",".join([":m%s" % i for i in range(len(models))]))
 
         return {row[0] for row in self.conn.execute(query, params)}
 
