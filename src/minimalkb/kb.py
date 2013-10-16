@@ -4,7 +4,8 @@ DEBUG_LEVEL=logging.DEBUG
 import shlex
 import traceback
 
-from backends.sqlite import SQLStore
+#from backends.sqlite import SQLStore
+from backends.rdflib_backend import RDFlibStore
 
 def api(fn):
     fn._api = True
@@ -81,7 +82,8 @@ class MinimalKB:
         _api = [getattr(self, fn) for fn in dir(self) if hasattr(getattr(self, fn), "_api")]
         self._api = {fn.__name__:fn for fn in _api}
 
-        self.store = SQLStore()
+        #self.store = SQLStore()
+        self.store = RDFlibStore()
 
         self.models = {"myself"}
 
