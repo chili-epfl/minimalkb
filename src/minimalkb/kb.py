@@ -4,7 +4,7 @@ DEBUG_LEVEL=logging.DEBUG
 import shlex
 import traceback
 
-from sqlite_store import SQLStore
+from backends.sqlite import SQLStore
 
 def api(fn):
     fn._api = True
