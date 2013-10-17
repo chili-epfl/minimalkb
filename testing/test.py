@@ -5,6 +5,8 @@ import kb
 
 from Queue import Empty
 
+REASONING_DELAY = 0.2
+
 class TestSequenceFunctions(unittest.TestCase):
 
     def setUp(self):
@@ -23,14 +25,63 @@ class TestSequenceFunctions(unittest.TestCase):
         with self.assertRaises(kb.KbError):
             self.kb.add("toto")
 
-
-    def test_modifications(self):
+    def test_basic_modifications(self):
 
         # check no exception is raised
         self.kb.add(["johnny rdf:type Human", "johnny rdfs:label \"A que Johnny\""])
         self.kb += ["alfred rdf:type Human", "alfred likes icecream"]
         self.kb.retract(["alfred rdf:type Human", "alfred likes icecream"])
         self.kb -= ["johnny rdf:type Human"]
+
+    def test_modifications(self):
+
+        self.assertFalse(self.kb["* * *"])
+        
+        self.kb += ["alfred rdf:type Human"]
+        self.assertItemsEqual(self.kb["* * *"], 
+                              [['alfred', 'rdf:type', 'Human']])
+
+        self.kb -= ["alfred rdf:type Human"]
+        self.assertFalse(self.kb["* * *"])
+
+        self.kb += ["alfred rdf:type Human", "alfred likes icecream"]
+        self.assertItemsEqual(self.kb["* * *"], 
+                              [['alfred', 'likes', 'icecream'],
+                               ['alfred', 'rdf:type', 'Human']])
+
+
+    def test_existence(self):
+
+        self.assertFalse('alfred' in self.kb)
+        self.assertFalse('alfred likes icecream' in self.kb)
+        self.assertFalse('alfred likes *' in self.kb)
+
+        self.kb += ["alfred rdf:type Human", "alfred likes icecream"]
+
+        self.assertTrue('alfred' in self.kb)
+        self.assertFalse('tartempion' in self.kb)
+
+        self.assertFalse('alfred likes' in self.kb)
+        self.assertTrue('alfred likes icecream' in self.kb)
+        self.assertTrue('alfred likes *' in self.kb)
+        self.assertTrue('alfred likes ?smthg' in self.kb)
+        self.assertFalse('alfred likes mygrandmother' in self.kb)
+
+        self.kb -= ["alfred rdf:type Human", "alfred likes icecream"]
+
+        self.assertFalse('alfred likes icecream' in self.kb)
+        self.assertFalse('alfred' in self.kb)
+
+    def test_existence_with_inference(self):
+        """ Requires a RDFS reasoner to run.
+        """
+        self.kb += ["alfred rdf:type Human", "Human rdfs:subClassOf Animal"]
+        time.sleep(REASONING_DELAY)
+        self.assertTrue('alfred rdf:type Animal' in self.kb)
+
+        self.kb += ["Animal rdfs:subClassOf Thing"]
+        time.sleep(REASONING_DELAY)
+        self.assertTrue('alfred rdf:type Thing' in self.kb)
 
     def test_retrieval(self):
 
@@ -47,21 +98,11 @@ class TestSequenceFunctions(unittest.TestCase):
         self.assertItemsEqual(self.kb["* rdf:type Human"],
                               ['johnny', 'alfred'])
 
-        self.assertTrue('alfred' in self.kb)
-        self.assertFalse('tartempion' in self.kb)
-
-        self.assertTrue('alfred likes icecream' in self.kb)
-        self.assertTrue('alfred likes *' in self.kb)
-        self.assertTrue('alfred likes ?smthg' in self.kb)
-        self.assertFalse('alfred likes mygrandmother' in self.kb)
-
         self.kb -= ["alfred rdf:type Human", "alfred likes icecream"]
 
         self.assertItemsEqual(self.kb["* rdf:type Human"],
                               ['johnny'])
 
-        self.assertFalse('alfred likes icecream' in self.kb)
-        self.assertFalse('alfred' in self.kb)
 
     def test_events(self):
 
@@ -167,15 +208,16 @@ class TestSequenceFunctions(unittest.TestCase):
         self.assertItemsEqual(self.kb.classesof("john"), [u'Genius'])
 
     def test_taxonomy_walking_inheritance(self):
-
+        """ Requires a RDFS reasoner to run.
+        """
         self.kb += ["john rdf:type Human"]
         self.assertItemsEqual(self.kb.classesof("john"), [u'Human'])
         self.kb += ["Human rdfs:subClassOf Animal"]
-        time.sleep(0.2) # leave some time for the reasoner to classify
+        time.sleep(REASONING_DELAY)
         self.assertItemsEqual(self.kb.classesof("john"), [u'Human', u'Animal'])
         self.assertItemsEqual(self.kb.classesof("john", True), [u'Human'])
         self.kb -= ["john rdf:type Human"]
-        time.sleep(0.2) # leave some time for the reasoner to classify
+        time.sleep(REASONING_DELAY)
         self.assertFalse(self.kb.classesof("john"))
 
 
@@ -186,4 +228,4 @@ if __name__ == '__main__':
     kblogger.setLevel(logging.DEBUG)
     kblogger.addHandler(console)
     
-    unittest.main()
+    unittest.main(failfast=True)
