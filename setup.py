@@ -4,12 +4,15 @@
 import os
 from distutils.core import setup
 
+#import __version__
+execfile('src/minimalkb/__init__.py')
+
 def readme():
     with open('README.md') as f:
         return f.read()
 
 setup(name='minimalKB',
-      version='0.3',
+      version=__version__,
       license='BSD',
       description='A SQLite-backed minimalistic knowledge based for robotic application. Mostly KB-API conformant.',
       long_description=readme(),
