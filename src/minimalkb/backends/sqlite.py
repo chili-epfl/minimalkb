@@ -39,7 +39,7 @@ class SQLStore:
     def add(self, stmts, model = "default"):
 
         timestamp = datetime.datetime.now().isoformat()
-        stmts = [shlex.split(s) for s in stmts]
+
         stmts = [[sqlhash(s,p,o, model), s, p, o, model, timestamp] for s,p,o in stmts]
 
 
@@ -49,8 +49,7 @@ class SQLStore:
                      VALUES (?, ?, ?, ?, ?, ?)''' % TRIPLETABLENAME, stmts)
 
     def delete(self, stmts, model = "default"):
-        
-        stmts = [shlex.split(s) for s in stmts]
+
         hashes = [[sqlhash(s,p,o, model)] for s,p,o in stmts]
 
         with self.conn:

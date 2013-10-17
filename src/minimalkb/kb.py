@@ -157,23 +157,24 @@ class MinimalKB:
 
         if isinstance(stmts, (str, unicode)):
             raise KbServerError("A list of statements is expected")
+        stmts = [self.parse_stmt(s) for s in stmts]
 
         if type(policy) != dict:
             raise KbServerError("Expected a dictionary as policy")
         models = self.normalize_models(policy.get('models', []))
 
         if policy["method"] in ["add", "safe_add"]:
-            logger.info("Adding to " + str(list(models)) + ":\n\t- " + "\n\t- ".join(stmts))
+            logger.info("Adding to " + str(list(models)) + ":\n\t- " + "\n\t- ".join([str(s) for s in stmts]))
             for model in models:
                 self.store.add(stmts, model)
 
         if policy["method"] == "retract":
-            logger.info("Deleting from " + str(list(models)) +":\n\t- " + "\n\t- ".join(stmts))
+            logger.info("Deleting from " + str(list(models)) +":\n\t- " + "\n\t- ".join([str(s) for s in stmts]))
             for model in models:
                 self.store.delete(stmts, model)
 
         if policy["method"] in ["update", "safe_update", "revision"]:
-            logger.info("Updating " + str(list(models)) + " with:\n\t- " + "\n\t- ".join(stmts))
+            logger.info("Updating " + str(list(models)) + " with:\n\t- " + "\n\t- ".join([str(s) for s in stmts]))
             for model in models:
                 self.store.update(stmts, model)
 
@@ -310,6 +311,8 @@ class MinimalKB:
         #p.join()
         pass
 
+    def parse_stmt(self, stmt):
+        return shlex.split(stmt.encode('utf8'))
 
     def normalize_models(self, models):
         """ If 'models' is None, [] or contains 'all', then
