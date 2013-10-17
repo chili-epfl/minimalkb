@@ -9,7 +9,7 @@ def readme():
         return f.read()
 
 setup(name='minimalKB',
-      version='0.2',
+      version='0.3',
       license='BSD',
       description='A SQLite-backed minimalistic knowledge based for robotic application. Mostly KB-API conformant.',
       long_description=readme(),
