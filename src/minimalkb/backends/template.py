@@ -4,6 +4,7 @@ DEBUG_LEVEL=logging.DEBUG
 class TemplateBackend:
 
     def __init__(self):
+        pass
 
     def clear(self):
         """ Empties all knowledge models.
