@@ -1,8 +1,23 @@
 import logging; logger = logging.getLogger("minimalKB."+__name__);
 DEBUG_LEVEL=logging.DEBUG
 
+import datetime
 import shlex
 import sqlite3
+
+TRIPLETABLENAME = "triples"
+TRIPLETABLE = '''CREATE TABLE IF NOT EXISTS %s
+                    ("hash" INTEGER PRIMARY KEY NOT NULL  UNIQUE , 
+                    "subject" TEXT NOT NULL , 
+                    "predicate" TEXT NOT NULL , 
+                    "object" TEXT NOT NULL , 
+                    "model" TEXT NOT NULL ,
+                    "timestamp" DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ,
+                    "expires" DATETIME ,
+                    "inferred" BOOLEAN DEFAULT 0 NOT NULL)'''
+
+def sqlhash(s,p,o,model):
+    return hash("%s%s%s%s"%(s,p,o, model))
 
 class SQLStore:
 
@@ -10,40 +25,40 @@ class SQLStore:
         self.conn = sqlite3.connect('kb.db')
         self.create_kb()
 
-    def hash(self, stmt, model):
-        return hash(stmt+model)
-
     def create_kb(self):
     
         with self.conn:
-            self.conn.execute('''CREATE  TABLE  IF NOT EXISTS "triples" 
-                    ("hash" INTEGER PRIMARY KEY NOT NULL  UNIQUE , 
-                    "subject" TEXT NOT NULL , 
-                    "predicate" TEXT NOT NULL , 
-                    "object" TEXT NOT NULL , 
-                    "model" TEXT NOT NULL )''')
+            self.conn.execute(TRIPLETABLE % TRIPLETABLENAME)
 
     def clear(self):
         with self.conn:
-            self.conn.execute("DROP TABLE triples")
+            self.conn.execute("DROP TABLE %s" % TRIPLETABLENAME)
 
         self.create_kb()
 
     def add(self, stmts, model = "default"):
 
-        stmts = [[self.hash(s, model)] + shlex.split(s) + [model] for s in stmts]
+        timestamp = datetime.datetime.now().isoformat()
+        stmts = [shlex.split(s) for s in stmts]
+        stmts = [[sqlhash(s,p,o, model), s, p, o, model, timestamp] for s,p,o in stmts]
+
 
         with self.conn:
-            self.conn.executemany('''INSERT OR IGNORE INTO triples 
-                     VALUES (?, ?, ?, ?, ?)''', stmts)
+            self.conn.executemany('''INSERT OR IGNORE INTO %s
+                     (hash, subject, predicate, object, model, timestamp)
+                     VALUES (?, ?, ?, ?, ?, ?)''' % TRIPLETABLENAME, stmts)
 
     def delete(self, stmts, model = "default"):
         
-        hashes = [[self.hash(s, model)] for s in stmts]
+        stmts = [shlex.split(s) for s in stmts]
+        hashes = [[sqlhash(s,p,o, model)] for s,p,o in stmts]
 
         with self.conn:
-            self.conn.executemany('''DELETE FROM triples 
-                        WHERE (hash=?)''', hashes)
+            # removal is non-monotonic. Remove all inferred statements
+            self.conn.execute("DELETE FROM %s WHERE inferred=1" % TRIPLETABLENAME)
+
+            self.conn.executemany('''DELETE FROM %s 
+                        WHERE (hash=?)''' % TRIPLETABLENAME, hashes)
 
     def update(self, stmts, model = "default"):
 
@@ -53,13 +68,20 @@ class SQLStore:
         self.add(stmts, model)
 
     def about(self, resource, models):
-        with self.conn:
-            res = self.conn.execute('''
+
+        params = {'res':resource}
+        # workaround to feed a variable number of models
+        models = list(models)
+        for i in range(len(models)):
+            params["m%s"%i] = models[i]
+
+        query = '''
                 SELECT subject, predicate, object 
-                FROM triples
+                FROM %s
                 WHERE (subject=:res OR predicate=:res OR object=:res)
-                    AND model IN (:models)
-                ''', {'res':  resource, 'models': ','.join(models)})
+                AND model IN (%s)''' % (TRIPLETABLENAME, ",".join([":m%s" % i for i in range(len(models))]))
+        with self.conn:
+            res = self.conn.execute(query, params)
             return [[row[0], row[1], row[2]] for row in res]
 
     def has(self, stmts, models):
@@ -107,24 +129,28 @@ class SQLStore:
         #TODO!
         return list(candidates)
 
+    def classesof(self, concept, direct, models):
+        if direct:
+            logger.warn("Direct classes are assumed to be the asserted is-a relations")
+            return list(self.simplequery("%s rdf:type *" % concept, models, assertedonly = True))
+        return list(self.simplequery("%s rdf:type *" % concept, models))
+    
+    ###################################################################################
+
     def has_stmt(self, pattern, models):
         """ Returns True if the given statment exist in
         *any* of the provided models.
         """
 
-        query = "SELECT hash FROM triples WHERE hash=?"
+        s,p,o = shlex.split(pattern)
+        query = "SELECT hash FROM %s WHERE hash=?" % TRIPLETABLENAME
         for m in models:
-            if self.conn.execute(query, (self.hash(pattern, m),)).fetchone():
+            if self.conn.execute(query, (sqlhash(s, p ,o , m),)).fetchone():
                 return True
 
         return False
  
-    def classesof(self, concept, direct, models):
-        logger.warn("Only returning asserted classes of %s" % concept)
-        return list(self.simplequery("%s rdf:type *" % concept, models))
-    
-    ###################################################################################
-    def simplequery(self, pattern, models = []):
+    def simplequery(self, pattern, models = [], assertedonly = False):
 
         def is_variable(s):
             return s[0] in ["*","?"]
@@ -141,14 +167,16 @@ class SQLStore:
 
         query = "SELECT "
         if is_variable(s):
-            query += "subject FROM triples WHERE (predicate=:p AND object=:o)"
+            query += "subject FROM %s WHERE (predicate=:p AND object=:o)" % TRIPLETABLENAME
         elif is_variable(p):
-            query += "predicate FROM triples WHERE (subject=:s AND object=:o)"
+            query += "predicate FROM %s WHERE (subject=:s AND object=:o)" % TRIPLETABLENAME
         elif is_variable(o):
-            query += "object FROM triples WHERE (subject=:s AND predicate=:p)"
+            query += "object FROM %s WHERE (subject=:s AND predicate=:p)" % TRIPLETABLENAME
         else:
-            query += "hash FROM triples WHERE (subject=:s AND predicate=:p AND object=:o)"
+            query += "hash FROM %s WHERE (subject=:s AND predicate=:p AND object=:o)" % TRIPLETABLENAME
 
+        if assertedonly:
+            query += " AND inferred=0"
         if models:
             query += " AND model IN (%s)" % (",".join([":m%s" % i for i in range(len(models))]))
 

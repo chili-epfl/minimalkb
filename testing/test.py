@@ -171,9 +171,11 @@ class TestSequenceFunctions(unittest.TestCase):
         self.kb += ["john rdf:type Human"]
         self.assertItemsEqual(self.kb.classesof("john"), [u'Human'])
         self.kb += ["Human rdfs:subClassOf Animal"]
+        time.sleep(0.2) # leave some time for the reasoner to classify
         self.assertItemsEqual(self.kb.classesof("john"), [u'Human', u'Animal'])
-        self.assertItemsEqual(self.kb.classesof("john", direct=True), [u'Human'])
+        self.assertItemsEqual(self.kb.classesof("john", True), [u'Human'])
         self.kb -= ["john rdf:type Human"]
+        time.sleep(0.2) # leave some time for the reasoner to classify
         self.assertFalse(self.kb.classesof("john"))
 
 

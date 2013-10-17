@@ -5,8 +5,11 @@ import shlex
 import traceback
 from exceptions import KbServerError
 
-#from backends.sqlite import SQLStore
-from backends.rdflib_backend import RDFlibStore
+from backends.sqlite import SQLStore
+#from backends.rdflib_backend import RDFlibStore
+
+from multiprocessing import Process
+from reasoning.simple_rdfs import start_reasoner, stop_reasoner
 
 def api(fn):
     fn._api = True
@@ -89,6 +92,8 @@ class MinimalKB:
 
         self.active_evts = set()
         self.triggered_evts = []
+
+        self.start_reasoner()
 
     @api
     def hello(self):
@@ -294,6 +299,16 @@ class MinimalKB:
                 self.triggered_evts.append(e)
                 if not e.valid:
                     self.active_evts.discard(e)
+        self.classify()
+
+    def start_reasoner(self, *args):
+        self._reasoner = Process(target = start_reasoner, args = ('kb.db',))
+        self._reasoner.start()
+
+    def classify(self, *args):
+        #p = Process(target = classifyOnce, args = ('kb.db',))
+        #p.join()
+        pass
 
 
     def normalize_models(self, models):
