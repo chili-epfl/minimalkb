@@ -2,13 +2,22 @@ import logging; logger = logging.getLogger("minimalKB."+__name__);
 DEBUG_LEVEL=logging.DEBUG
 
 import shlex
-import traceback
+from multiprocessing import Process
+
+hasRDFlib = False
+try:
+    import rdflib
+    import rdflib.namespace
+    hasRDFlib = True
+except ImportError:
+    logger.warn("RDFlib not available. You won't be able to load existing ontologies.")
+    pass
+
 from exceptions import KbServerError
 
 from backends.sqlite import SQLStore
 #from backends.rdflib_backend import RDFlibStore
 
-from multiprocessing import Process
 from reasoning.simple_rdfs import start_reasoner, stop_reasoner
 
 def api(fn):
@@ -102,8 +111,42 @@ class MinimalKB:
     @api
     def load(self, filename):
         logger.info("Loading triples from %s" % filename)
-        with open(filename, 'r') as triples:
-            self.store.add([s.strip() for s in triples.readlines()])
+
+        if hasRDFlib:
+            g = rdflib.Graph()
+            nsm = rdflib.namespace.NamespaceManager(g)
+            #namespace_manager.bind(DEFAULT_NAMESPACE[0], self.default_ns)
+            g.parse(filename)
+            triples = []
+            for s,p,o in g:
+
+                #skip blank nodes
+                if  isinstance(s, rdflib.term.BNode) or \
+                    isinstance(p, rdflib.term.BNode) or \
+                    isinstance(o, rdflib.term.BNode):
+                        continue
+                try:
+                    s = nsm.qname(s)
+                except:
+                    pass
+                try:
+                    p = nsm.qname(p)
+                except:
+                    pass
+                try:
+                    if isinstance(o, rdflib.term.Literal):
+                        o = o.toPython()
+                    else:
+                        o = nsm.qname(o)
+                except:
+                    pass
+                triples += [(s,p,o)]
+
+            logger.debug("Importing:\n%s" % triples)
+            self.store.add(triples)
+        else:
+            with open(filename, 'r') as triples:
+                self.store.add([shlex.split(s.strip()) for s in triples.readlines()])
 
     @api
     def clear(self):
