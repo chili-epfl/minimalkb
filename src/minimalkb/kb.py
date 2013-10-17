@@ -85,7 +85,7 @@ class MinimalKB:
     MEMORYPROFILE_DEFAULT = ""
     MEMORYPROFILE_SHORTTERM = "SHORTTERM"
 
-    def __init__(self):
+    def __init__(self, filename = None):
         _api = [getattr(self, fn) for fn in dir(self) if hasattr(getattr(self, fn), "_api")]
         self._api = {fn.__name__:fn for fn in _api}
 
@@ -103,6 +103,9 @@ class MinimalKB:
         self.triggered_evts = []
 
         self.start_reasoner()
+
+        if filename:
+            self.load(filename)
 
     @api
     def hello(self):

@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+__version__="0.3.0"
+
 import logging; logger = logging.getLogger("minimalKB");
 
-DEBUG_LEVEL=logging.DEBUG
 
 import sys
 import asyncore, asynchat
@@ -91,19 +92,35 @@ class MinimalKBServer(asyncore.dispatcher):
         conn, addr = self.accept()
         MinimalKBChannel(self, conn, addr, kb)
 
+def version():
+    print("minimalKB %s" % __version__)
+
 if __name__ == '__main__':
 
     from minimalkb.ansistrm import ColorizingStreamHandler
+    import argparse
+
+    parser = argparse.ArgumentParser(description='A minimal knowledge base for robots.')
+    parser.add_argument('-v', '--version', action='version',
+                       version=version(), help='returns minimalKB version')
+    parser.add_argument('-d', '--debug', action='store_true',
+                                help='enables verbose output')
+    parser.add_argument('ontology', default="", nargs='?', help="local file or URL of an intial ontology to load")
+
+    args = parser.parse_args()
 
     console = ColorizingStreamHandler()
-    logger.setLevel(DEBUG_LEVEL)
+    
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
     formatter = logging.Formatter('%(asctime)-15s: %(message)s')
     console.setFormatter(formatter)
     logger.addHandler(console)
 
-    kb = MinimalKB()
-    if len(sys.argv) == 2:
-        kb.load(sys.argv[1])
+    kb = MinimalKB(args.ontology)
 
     s = MinimalKBServer(PORT, kb)
     logger.info("Starting to serve at port %d..." % PORT)
