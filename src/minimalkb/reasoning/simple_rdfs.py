@@ -127,7 +127,7 @@ class SQLiteSimpleRDFSReasoner:
 
     def update_shared_db(self, stmts):
 
-        logger.debug("Reasoner added the following new statements: %s" % stmts)
+        logger.debug("Reasoner added %s new statements: %s" % (len(stmts), stmts))
 
         timestamp = datetime.datetime.now().isoformat()
         stmts = [[sqlhash(s,p,o,model), s, p, o, model, timestamp] for s,p,o,model in stmts]
