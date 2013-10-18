@@ -155,6 +155,11 @@ class MinimalKB:
             with open(filename, 'r') as triples:
                 self.store.add([shlex.split(s.strip()) for s in triples.readlines()])
 
+    @compat
+    @api
+    def listAgents(self):
+        return list(self.models)
+
     @api
     def clear(self):
         logger.warn("Clearing the knowledge base!")
@@ -178,6 +183,11 @@ class MinimalKB:
     @api
     def about(self, resource, models = None):
         return self.store.about(resource, self.normalize_models(models))
+
+    @compat
+    @api
+    def lookupForAgent(self, agent, resource):
+        return self.lookup(resource, models = [agent])
 
     @api
     def lookup(self, resource, models = None):
@@ -238,6 +248,12 @@ class MinimalKB:
         return self.revise(stmts,
                            {"method": "add",
                             "models": models})
+
+    @compat
+    @api
+    def safeAdd(self, stmts):
+        return self.revise(stmts, {"method": "safe_add"})
+
 
     @compat
     @api
