@@ -103,8 +103,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='A minimal knowledge base for robots.')
     parser.add_argument('-v', '--version', action='version',
                        version=version(), help='returns minimalKB version')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                                help='be quiet (only errors are reported)')
     parser.add_argument('-d', '--debug', action='store_true',
                                 help='enables verbose output')
+    parser.add_argument('-p', '--port', default=PORT, type=int, nargs='?',
+                                help='port the server listen to.')
     parser.add_argument('ontology', default="", nargs='?', help="local file or URL of an intial ontology to load")
 
     args = parser.parse_args()
@@ -113,6 +117,8 @@ if __name__ == '__main__':
     
     if args.debug:
         logger.setLevel(logging.DEBUG)
+    elif args.quiet:
+        logger.setLevel(logging.ERROR)
     else:
         logger.setLevel(logging.INFO)
 
@@ -122,6 +128,6 @@ if __name__ == '__main__':
 
     kb = MinimalKB(args.ontology)
 
-    s = MinimalKBServer(PORT, kb)
-    logger.info("Starting to serve at port %d..." % PORT)
+    s = MinimalKBServer(args.port, kb)
+    logger.info("Starting to serve at port %d..." % args.port)
     asyncore.loop()
