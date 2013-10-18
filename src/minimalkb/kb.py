@@ -100,7 +100,7 @@ class MinimalKB:
 
         apilist = [key + (" (compatibility)" if hasattr(val, "_compat") else "") for key, val in self._api.items()]
 
-        logger.info("Initializing the MinimalKB with the following API: \n\t- " + \
+        logger.debug("Initializing the MinimalKB with the following API: \n\t- " + \
                 "\n\t- ".join(apilist))
 
         self.active_evts = set()
