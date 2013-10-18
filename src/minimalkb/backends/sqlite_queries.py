@@ -26,6 +26,7 @@ def query(db, vars, patterns, models):
         return singlepattern(db, patterns[0], models)
 
     independentpatterns = {p for p in patterns if nb_variables(p) == 1}
+    dependentpatterns = set(patterns) - independentpatterns
 
     directpatterns = {}
 
@@ -51,7 +52,6 @@ def query(db, vars, patterns, models):
     if len(vars) == 1:
         var = vars.pop()
 
-        dependentpatterns = set(patterns) - independentpatterns
 
         # no dependent pattern? no need to filter!
         if not dependentpatterns:
@@ -77,7 +77,18 @@ def query(db, vars, patterns, models):
         return list(candidate)
 
     else:
+        if not dependentpatterns:
+                raise NotImplementedError("Multiple variable in independent patterns not yet supported.")
+
         raise NotImplementedError("Only a single variable in queries can be currently requested.")
+        ### TODO !!! ###
+        while dependentpatterns:
+            pattern = dependentpatterns.pop()
+            s, p, o = pattern
+            stmts = [(r[1], r[2], r[3]) for r in matchingstmt(db, pattern, models)]
+
+            if is_variable(s):
+                pass
 
 
 def singlepattern(db, pattern, models):

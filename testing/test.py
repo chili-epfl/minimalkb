@@ -130,8 +130,12 @@ class TestSequenceFunctions(unittest.TestCase):
 
         self.kb += ["nono desires jump", "alfred desires oil"]
         self.assertItemsEqual(self.kb["* * *"], [["nono", "desires", "jump"], ["alfred", "desires", "oil"], ["nono", "rdf:type", "Human"], ["alfred", "rdf:type", "Robot"]])
-        self.kb += ["jump rdf:type Action"]
 
+        self.kb += ["nono loves icecream"]
+        self.assertItemsEqual(self.kb["?agent desires jump", "?agent loves icecream"], ["nono"])
+        self.assertItemsEqual(self.kb["?agent desires *", "?agent loves icecream"], ["nono"])
+
+        self.kb += ["jump rdf:type Action"]
         self.assertItemsEqual(self.kb["?agent rdf:type Robot", "?agent desires ?obj"], [{"agent":"alfred", "obj":"oil"}])
         self.assertItemsEqual(self.kb["?agent desires ?act", "?act rdf:type Action"], [{"agent":"nono", "act":"jump"}])
         self.assertItemsEqual(self.kb["?agent desires ?obj"], [{"agent":"alfred", "obj":"oil"}, {"agent":"nono", "obj":"jump"}])
