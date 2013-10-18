@@ -36,7 +36,7 @@ def query(db, vars, patterns, models):
         # first, execute simple queries to determine potential candidates:
         # resolve patterns that contain *only* the desired output variable
         for p in (independentpatterns & directpatterns[v]):
-            if not candidates:
+            if v not in candidates:
                 candidates[v] = simplequery(db, p, models)
             else:
                 # intersection with previous candidates
@@ -49,15 +49,18 @@ def query(db, vars, patterns, models):
             return []
 
     if len(vars) == 1:
-        res = []
+        var = vars.pop()
 
         dependentpatterns = set(patterns) - independentpatterns
 
+        # no dependent pattern? no need to filter!
+        if not dependentpatterns:
+            return list(candidates[var])
+
         candidate = set()
-        var = vars.pop()
         for pattern in dependentpatterns:
             if var not in pattern:
-                raise NotImplementedError("Can not handle pattern %s with requested variables %s." % (p, vars))
+                raise NotImplementedError("Can not handle pattern %s with requested variable %s." % (pattern, var))
 
 
             def prepare(tok):
@@ -71,7 +74,7 @@ def query(db, vars, patterns, models):
                 candidate = selectfromset(db, s, p, o, models)
             else:
                 candidate &= selectfromset(db, s, p, o, models)
-        return candidate
+        return list(candidate)
 
     else:
         raise NotImplementedError("Only a single variable in queries can be currently requested.")
@@ -93,7 +96,7 @@ def nb_variables(s):
     return len(get_vars(s))
 
 def is_variable(tok):
-    return tok.startswith('?')
+    return tok and tok.startswith('?')
 
 
 def matchingstmt(db, pattern, models = [], assertedonly = False):
