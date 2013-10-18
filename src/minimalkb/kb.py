@@ -28,6 +28,10 @@ def compat(fn):
     fn._compat = True
     return fn
 
+def parse_stmt(stmt):
+    return tuple(shlex.split(stmt.encode('utf8')))
+
+
 class Event:
 
     NEW_INSTANCE = "NEW_INSTANCE"
@@ -53,7 +57,7 @@ class Event:
 
         self.previous_instances = set()
         if type in [Event.NEW_INSTANCE, Event.NEW_INSTANCE_ONE_SHOT]:
-            instances = self.kb.find([var], patterns, None, models)
+            instances = self.kb.store.query([self.var], self.patterns, self.models)
             logger.debug("Creating a NEW_INSTANCE event with initial instances %s"%instances)
             self.previous_instances = set(instances)
 
@@ -68,7 +72,7 @@ class Event:
             self.valid = False
 
         if self.type in [Event.NEW_INSTANCE, Event.NEW_INSTANCE_ONE_SHOT]:
-            instances = set(self.kb.find([self.var], self.patterns, None, self.models))
+            instances = set(self.kb.store.query([self.var], self.patterns, self.models))
             newinstances = instances - self.previous_instances
         
             if not newinstances:
@@ -195,6 +199,8 @@ class MinimalKB:
     def exist(self, stmts, models = None):
         logger.info("Checking existence of " + str(stmts) + \
                     " in " + (str(models) if models else "any model."))
+        stmts = [parse_stmt(s) for s in stmts]
+
         return self.store.has(stmts,
                               self.normalize_models(models))
 
@@ -203,7 +209,7 @@ class MinimalKB:
 
         if isinstance(stmts, (str, unicode)):
             raise KbServerError("A list of statements is expected")
-        stmts = [self.parse_stmt(s) for s in stmts]
+        stmts = [parse_stmt(s) for s in stmts]
 
         if type(policy) != dict:
             raise KbServerError("Expected a dictionary as policy")
@@ -268,16 +274,33 @@ class MinimalKB:
         return self.find([var], stmts, None, [agent])
 
     @api
-    def find(self, vars, pattern, constraints = None, models = None):
+    def find(self, vars, patterns, constraints = None, models = None):
+        '''
+        Depending on the arguments, three differents
+        behaviours are possible:
+
+        - if len(vars) == 1, 'find' returns a set of resources matching the patterns.
+        - if len(vars) > 1:
+            - if len(patterns) == 1, a list of statements matching the pattern
+              is returned.
+            - else, a list of dictionaries is returned with
+            possible combination of values for the different variables. For
+            instance, find(["?agent", "?action"], ["?agent desires ?action", "?action rdf:type Jump"])
+            would return something like: [{"agent":"james", "action": "jumpHigh"}, {"agent": "laurel", "action":"jumpHigher"}]
+
+        Note that 'constraints' is currently not supported.
+        '''
 
         if not models:
             models = self.models
 
+        patterns = [parse_stmt(p) for p in patterns]
+
         logger.info("Searching " + str(vars) + \
                     " in models " + str(models) + \
-                    " matching:\n\t- " + "\n\t- ".join(pattern))
+                    " matching:\n\t- " + "\n\t- ".join([str(p) for p in patterns]))
 
-        res = self.store.query(vars, pattern, models)
+        res = self.store.query(vars, patterns, models)
         
         logger.info("Found: " + str(res))
         return res
@@ -293,6 +316,7 @@ class MinimalKB:
     def subscribe(self, type, trigger, var, patterns, models = None):
 
         models = self.normalize_models(models)
+        patterns = [parse_stmt(p) for p in patterns]
 
         logger.info("Registering a new event: %s %s for %s on %s" % (type, trigger, var, patterns) + \
                     " in " + (str(models) if models else "any model."))
@@ -356,9 +380,6 @@ class MinimalKB:
         #p = Process(target = classifyOnce, args = ('kb.db',))
         #p.join()
         pass
-
-    def parse_stmt(self, stmt):
-        return shlex.split(stmt.encode('utf8'))
 
     def normalize_models(self, models):
         """ If 'models' is None, [] or contains 'all', then

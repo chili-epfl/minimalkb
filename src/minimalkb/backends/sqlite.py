@@ -2,8 +2,9 @@ import logging; logger = logging.getLogger("minimalKB."+__name__);
 DEBUG_LEVEL=logging.DEBUG
 
 import datetime
-import shlex
 import sqlite3
+
+from sqlite_queries import query, simplequery, matchingstmt
 
 TRIPLETABLENAME = "triples"
 TRIPLETABLE = '''CREATE TABLE IF NOT EXISTS %s
@@ -85,54 +86,24 @@ class SQLStore:
 
     def has(self, stmts, models):
 
+        candidates = set()
         for s in stmts:
-            nbvars = self.nb_variables(s)
-            if nbvars == 0:
-                if not self.has_stmt(s, models):
-                    return False
-            elif nbvars == 1:
-                if not self.simplequery(s, models):
-                    return False
+            if not candidates:
+                candidates = set(matchingstmt(self.conn, s, models))
             else:
-                raise NotImplementedError("Only a single variable in existence check is currently supported.")
+                candidates &= set(matchingstmt(self.conn, s, models))
 
-        return True
-
+        return len(candidates) > 0
 
 
     def query(self, vars, patterns, models):
-
-        if len(vars) > 1:
-            raise NotImplementedError("Only a single variable in queries is currently supported.")
-
-        if len(patterns) == 1:
-            return list(self.simplequery(patterns[0]))
-
-        independentpatterns = {p for p in patterns if self.nb_variables(p) == 1}
-        directpatterns = {p for p in patterns if vars[0] in p}
-
-        # first, execute simple queries to determine potential candidates:
-        # resolve patterns that contain *only* the desired output variable
-        candidates = set()
-        for p in (independentpatterns & directpatterns):
-            if not candidates:
-                candidates = self.simplequery(p)
-            else:
-                # intersection with previous candidates
-                candidates = candidates & self.simplequery(p)
-
-        if not candidates:
-            return []
-
-        #now, filter out!
-        #TODO!
-        return list(candidates)
+        return query(self.conn, vars, patterns, models)
 
     def classesof(self, concept, direct, models):
         if direct:
             logger.warn("Direct classes are assumed to be the asserted is-a relations")
-            return list(self.simplequery("%s rdf:type *" % concept, models, assertedonly = True))
-        return list(self.simplequery("%s rdf:type *" % concept, models))
+            return list(simplequery(self.conn, (concept, "rdf:type", "?class"), models, assertedonly = True))
+        return list(simplequery(self.conn, (concept, "rdf:type", "?class"), models))
     
     ###################################################################################
 
@@ -141,47 +112,17 @@ class SQLStore:
         *any* of the provided models.
         """
 
-        s,p,o = shlex.split(pattern)
+        s,p,o = pattern
         query = "SELECT hash FROM %s WHERE hash=?" % TRIPLETABLENAME
         for m in models:
             if self.conn.execute(query, (sqlhash(s, p ,o , m),)).fetchone():
                 return True
 
         return False
- 
-    def simplequery(self, pattern, models = [], assertedonly = False):
 
-        def is_variable(s):
-            return s[0] in ["*","?"]
+def get_vars(s):
+    return [x for x in s if x.startswith('?')]
 
-        s,p,o = shlex.split(pattern)
-        params = {'s':s,
-                  'p':p,
-                  'o':o,
-                 }
-        # workaround to feed a variable number of models
-        models = list(models)
-        for i in range(len(models)):
-            params["m%s"%i] = models[i]
-
-        query = "SELECT "
-        if is_variable(s):
-            query += "subject FROM %s WHERE (predicate=:p AND object=:o)" % TRIPLETABLENAME
-        elif is_variable(p):
-            query += "predicate FROM %s WHERE (subject=:s AND object=:o)" % TRIPLETABLENAME
-        elif is_variable(o):
-            query += "object FROM %s WHERE (subject=:s AND predicate=:p)" % TRIPLETABLENAME
-        else:
-            query += "hash FROM %s WHERE (subject=:s AND predicate=:p AND object=:o)" % TRIPLETABLENAME
-
-        if assertedonly:
-            query += " AND inferred=0"
-        if models:
-            query += " AND model IN (%s)" % (",".join([":m%s" % i for i in range(len(models))]))
-
-        return {row[0] for row in self.conn.execute(query, params)}
-
-    def nb_variables(self, s):
-        return (s.count("?") + s.count("*"))
-
+def nb_variables(s):
+    return len(get_vars(s))
 
