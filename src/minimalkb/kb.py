@@ -14,6 +14,7 @@ except ImportError:
     pass
 
 from exceptions import KbServerError
+from minimalkb import __version__
 
 from backends.sqlite import SQLStore
 #from backends.rdflib_backend import RDFlibStore
@@ -113,7 +114,7 @@ class MinimalKB:
 
     @api
     def hello(self):
-        return "MinimalKB, v.0.1"
+        return "MinimalKB, v.%s" % __version__
 
     @api
     def load(self, filename):
