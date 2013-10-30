@@ -1,6 +1,9 @@
 import logging; logger = logging.getLogger("minimalKB."+__name__);
 DEBUG_LEVEL=logging.DEBUG
 
+from Queue import Queue, Empty
+import json
+
 import shlex
 from multiprocessing import Process
 
@@ -104,8 +107,11 @@ class MinimalKB:
         logger.debug("Initializing the MinimalKB with the following API: \n\t- " + \
                 "\n\t- ".join(apilist))
 
+        self.incomingrequests = Queue()
+        self.requestresults = {}
+
         self.active_evts = set()
-        self.triggered_evts = []
+        self.eventsubscriptions = {}
 
         self.start_reasoner()
 
@@ -383,20 +389,17 @@ class MinimalKB:
     def onupdate(self):
         for e in self.active_evts:
             if e.evaluate():
-                logger.info("Event %s triggered." % e.id)
-                self.triggered_evts.append(e)
+                clients = self.eventsubscriptions[e.id]
+                logger.info("Event %s triggered. Informing %s clients." % (e.id, len(clients)))
+                for client in clients:
+                    msg = "event\n%s\n%s\n" % (e.id, json.dumps(e.content))
+                    self.requestresults.setdefault(client,Queue()).put(msg)
                 if not e.valid:
                     self.active_evts.discard(e)
-        self.classify()
 
     def start_reasoner(self, *args):
         self._reasoner = Process(target = start_reasoner, args = ('kb.db',))
         self._reasoner.start()
-
-    def classify(self, *args):
-        #p = Process(target = classifyOnce, args = ('kb.db',))
-        #p.join()
-        pass
 
     def normalize_models(self, models):
         """ If 'models' is None, [] or contains 'all', then
@@ -416,14 +419,42 @@ class MinimalKB:
         else:
             return self.models
 
-    def execute(self, name, *args):
+    def execute(self, client, name, *args):
         f = getattr(self, name)
         if hasattr(f, "_compat"):
                 logger.warn("Using non-standard method %s. This may be " % f.__name__ + \
                         "removed in the future!")
         
-        if args:
-            return f(*args)
-        else:
-            return f()
+        msg = ""
+        try:
+            res = None
+            if args:
+                res = f(*args)
+                if name=="subscribe":
+                    self.eventsubscriptions.setdefault(res, []).append(client)
+            else:
+                res = f()
+            msg = "ok\n%s\n" % json.dumps(res) if res is not None else "ok\n"
+        except Exception as e:
+            if logger.level == logging.DEBUG:
+                traceback.print_exc()
+            logger.error("Request failed: %s" % e)
+            msg = "error\nKbError\n%s\n" % str(e)
+
+        self.requestresults.setdefault(client,Queue()).put(msg)
+
+    def submitrequest(self, client, name, *args):
+        self.incomingrequests.put((client, name, args))
+
+    def process(self):
+        try:
+            client, name, args = self.incomingrequests.get(True, 0.05)
+            logger.debug("Processing now %s%s" %(name, str(args)))
+            self.execute(client, name, *args)
+        except Empty:
+            pass
+
+        for client, pendingmsg in self.requestresults.items():
+            while not pendingmsg.empty():
+                client.sendmsg(pendingmsg.get())
 

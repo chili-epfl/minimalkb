@@ -45,35 +45,14 @@ class MinimalKBChannel(asynchat.async_chat):
 
     def found_terminator(self):
 
-        res, events = None, None
         logger.debug("Got request:" + self.data )
         request, args = self.parse_request(self.data)
         self.data = ""
-        try:
-            res = self.kb.execute(request, *args)
-        except Exception as e:
-            if logger.level == logging.DEBUG:
-                traceback.print_exc()
-            logger.error("Request failed: %s" % e)
-            self.push("error\n")
-            self.push("KbError\n")
-            self.push(str(e) + "\n")
-            self.push("#end#\n")
-            return
+        self.kb.submitrequest(self, request, *args)
 
-        logger.debug("Returned " + str(res))
-        self.push("ok\n")
-        if res is not None:
-            self.push(json.dumps(res))
-        self.push("\n#end#\n")
-
-        for e in self.kb.triggered_evts:
-            logger.debug("Notifying event %s" % e.id)
-            self.push("event\n")
-            self.push(e.id + "\n")
-            self.push(json.dumps(e.content))
-            self.push("\n#end#\n")
-        self.kb.triggered_evts = []
+    def sendmsg(self, msg):
+        logger.debug("Sent message:" + msg)
+        self.push(msg + "#end#\n")
 
 
 class MinimalKBServer(asyncore.dispatcher):
@@ -130,4 +109,10 @@ if __name__ == '__main__':
 
     s = MinimalKBServer(args.port, kb)
     logger.info("Starting to serve at port %d..." % args.port)
-    asyncore.loop()
+
+    try:
+        while True:
+            asyncore.loop(count = 1)
+            kb.process()
+    except KeyboardInterrupt:
+        logger.info("Bye bye")

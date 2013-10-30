@@ -140,9 +140,12 @@ class SQLiteSimpleRDFSReasoner:
 
     def __call__(self, *args):
 
-        while self.running:
-            time.sleep(1./REASONER_RATE)
-            self.classify()
+        try:
+            while self.running:
+                time.sleep(1./REASONER_RATE)
+                self.classify()
+        except KeyboardInterrupt:
+            return
 
 reasoner = None
 
