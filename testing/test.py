@@ -322,6 +322,19 @@ class TestSequenceFunctions(unittest.TestCase):
         time.sleep(REASONING_DELAY)
         self.assertFalse(self.kb.classesof("john"))
 
+    def test_memory(self):
+
+        self.kb.add(["john rdf:type Human"])
+        time.sleep(1.2)
+        self.assertTrue('john' in self.kb)
+        self.kb.remove(["john rdf:type Human"])
+        self.kb.add(["john rdf:type Human"], [], 0.5)
+        time.sleep(0.4)
+        self.assertTrue('john' in self.kb)
+        time.sleep(0.6)
+        self.assertFalse('john' in self.kb)
+
+
 def version():
     print("minimalKB tests %s" % __version__)
 

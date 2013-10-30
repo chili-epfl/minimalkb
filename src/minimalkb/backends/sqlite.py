@@ -37,17 +37,30 @@ class SQLStore:
 
         self.create_kb()
 
-    def add(self, stmts, model = "default"):
+    def add(self, stmts, model = "default", lifespan = 0):
 
-        timestamp = datetime.datetime.now().isoformat()
+        timestamp = datetime.datetime.now()
+        expires = None
+        if lifespan > 0:
+            expires = (timestamp + datetime.timedelta(seconds = lifespan)).isoformat()
 
-        stmts = [[sqlhash(s,p,o, model), s, p, o, model, timestamp] for s,p,o in stmts]
+        timestamp = timestamp.isoformat()
 
+        if expires:
+            stmts = [[sqlhash(s,p,o, model), s, p, o, model, timestamp, expires] for s,p,o in stmts]
+        else:
+            stmts = [[sqlhash(s,p,o, model), s, p, o, model, timestamp] for s,p,o in stmts]
 
         with self.conn:
-            self.conn.executemany('''INSERT OR IGNORE INTO %s
-                     (hash, subject, predicate, object, model, timestamp)
-                     VALUES (?, ?, ?, ?, ?, ?)''' % TRIPLETABLENAME, stmts)
+            if expires:
+                self.conn.executemany('''INSERT OR IGNORE INTO %s
+                        (hash, subject, predicate, object, model, timestamp, expires)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)''' % TRIPLETABLENAME, stmts)
+            else:
+                self.conn.executemany('''INSERT OR IGNORE INTO %s
+                        (hash, subject, predicate, object, model, timestamp)
+                        VALUES (?, ?, ?, ?, ?, ?)''' % TRIPLETABLENAME, stmts)
+ 
 
     def delete(self, stmts, model = "default"):
 
@@ -60,12 +73,12 @@ class SQLStore:
             self.conn.executemany('''DELETE FROM %s 
                         WHERE (hash=?)''' % TRIPLETABLENAME, hashes)
 
-    def update(self, stmts, model = "default"):
+    def update(self, stmts, model = "default", lifespan = 0):
 
         logger.warn("With SQLite store, update is strictly equivalent to " + \
                     "add (ie, no functional property check")
 
-        self.add(stmts, model)
+        self.add(stmts, model, lifespan)
 
     def about(self, resource, models):
 

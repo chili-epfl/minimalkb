@@ -223,6 +223,14 @@ class MinimalKB:
 
     @api
     def revise(self, stmts, policy):
+        """
+
+        Supported policy options:
+        - method: string in [add, safe_add, retract, update, safe_update, revision]
+        - models: list of strings
+        - lifespan: duration before automatic removal of statements, in
+          seconds, float
+        """
 
         if isinstance(stmts, (str, unicode)):
             raise KbServerError("A list of statements is expected")
@@ -233,9 +241,13 @@ class MinimalKB:
         models = self.normalize_models(policy.get('models', []))
 
         if policy["method"] in ["add", "safe_add"]:
-            logger.info("Adding to " + str(list(models)) + ":\n\t- " + "\n\t- ".join([str(s) for s in stmts]))
+
+            lifespan = policy.get('lifespan', 0)
+
+            logger.info("Adding to " + str(list(models)) + ":\n\t- " + "\n\t- ".join([str(s) for s in stmts]) + \
+                    " (lifespan: %ssec)"%lifespan if lifespan else "")
             for model in models:
-                self.store.add(stmts, model)
+                self.store.add(stmts, model, lifespan=lifespan)
 
         if policy["method"] == "retract":
             logger.info("Deleting from " + str(list(models)) +":\n\t- " + "\n\t- ".join([str(s) for s in stmts]))
@@ -243,29 +255,35 @@ class MinimalKB:
                 self.store.delete(stmts, model)
 
         if policy["method"] in ["update", "safe_update", "revision"]:
-            logger.info("Updating " + str(list(models)) + " with:\n\t- " + "\n\t- ".join([str(s) for s in stmts]))
+
+            lifespan = policy.get('lifespan', 0)
+            
+            logger.info("Updating " + str(list(models)) + " with:\n\t- " + "\n\t- ".join([str(s) for s in stmts]) + \
+                    " (lifespan: %ssec)"%lifespan if lifespan else "")
             for model in models:
-                self.store.update(stmts, model)
+                self.store.update(stmts, model, lifespan=lifespan)
 
 
         self.onupdate()
 
     @api
-    def add(self, stmts, models = None):
+    def add(self, stmts, models = None, lifespan = 0):
         return self.revise(stmts,
                            {"method": "add",
-                            "models": models})
+                            "models": models,
+                            "lifespan": lifespan})
 
     @compat
     @api
-    def safeAdd(self, stmts):
-        return self.revise(stmts, {"method": "safe_add"})
+    def safeAdd(self, stmts, lifespan = 0):
+        return self.revise(stmts, {"method": "safe_add",
+                                   "lifespan": lifespan})
 
 
     @compat
     @api
-    def addForAgent(self, agent, stmts):
-        return self.add(stmts, [agent])
+    def addForAgent(self, agent, stmts, lifespan = 0):
+        return self.add(stmts, [agent], lifespan)
 
     @api
     def retract(self, stmts, models = None):
@@ -285,10 +303,11 @@ class MinimalKB:
 
 
     @api
-    def update(self, stmts, models = None):
+    def update(self, stmts, models = None, lifespan = 0):
         return self.revise(stmts,
                            {"method": "update",
-                            "models": models})
+                            "models": models,
+                            "lifespan":  lifespan})
 
 
     @compat
