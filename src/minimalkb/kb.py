@@ -43,7 +43,9 @@ def parse_stmt(stmt):
 class Event:
 
     NEW_INSTANCE = "NEW_INSTANCE"
+    NEW_CLASS_INSTANCE = "NEW_CLASS_INSTANCE"
     NEW_INSTANCE_ONE_SHOT = "NEW_INSTANCE_ONE_SHOT"
+    NEW_CLASS_INSTANCE_ONE_SHOT = "NEW_CLASS_INSTANCE_ONE_SHOT"
 
     def __init__(self, kb, type, trigger, var, patterns, models):
         self.kb = kb
@@ -55,7 +57,7 @@ class Event:
 
         self.id =  "evt_" + str(hash(self.type + \
                     self.trigger + \
-                    self.var + \
+                    self.var if self.var else "" + \
                     str(sorted(self.patterns)) + \
                     str(sorted(self.models))))
 
@@ -375,6 +377,12 @@ class MinimalKB:
 
     @compat
     @api
+    def registerEvent(self, type, trigger, patterns):
+        return self.subscribe(type, trigger, None, patterns)
+
+
+    @compat
+    @api
     def discriminateForAgent(self, *args):
         raise NotImplementedError('discriminateForAgent not implemented in MinimalKB')
 
@@ -383,7 +391,6 @@ class MinimalKB:
     def getLabel(self, concept):
         return self.store.label(concept)
 
-    
     @compat
     @api
     def getDirectClassesOf(self, concept):
