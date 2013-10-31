@@ -1,7 +1,9 @@
 minimalKB
 =========
 
-minimalKB is a SQLite-backed minimalistic knowledge based for initially designed
+![Screenshot of a minimalKB knowledge model viewed with oro-view](doc/oroview.jpg)
+
+minimalKB is a SQLite-backed minimalistic knowledge base, initially designed
 for robots (in particular human-robot interaction or multi-robot interaction).
 
 It stores triples (like RDF/OWL triples), and provides a mostly conformant
@@ -49,4 +51,15 @@ transitive closure of the `rdfs:subClassOf` relation.
 The reasoner runs in its own thread, and classify the model at a given rate, by
 default 5Hz. It is thus needed to wait ~200ms before the results of the
 classification become visible in the model.
+
+### Transient knowledge
+
+`minimalKB` allows to attach 'lifespans' to statements: after a given duration,
+they are automatically collected.
+
+### Ontology walking
+
+`minimalKB` exposes several methods to explore the different ontological models
+of the knowledge base. It is compatible with the visualization tool
+[oro-view](https://github.com/severin-lemaignan/oro-view).
 
