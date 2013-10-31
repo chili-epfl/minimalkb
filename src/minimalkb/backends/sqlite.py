@@ -5,6 +5,8 @@ import datetime
 import sqlite3
 
 from sqlite_queries import query, simplequery, matchingstmt
+from minimalkb.kb import DEFAULT_MODEL
+
 
 TRIPLETABLENAME = "triples"
 TRIPLETABLE = '''CREATE TABLE IF NOT EXISTS %s
@@ -37,7 +39,7 @@ class SQLStore:
 
         self.create_kb()
 
-    def add(self, stmts, model = "default", lifespan = 0):
+    def add(self, stmts, model = DEFAULT_MODEL, lifespan = 0):
 
         timestamp = datetime.datetime.now()
         expires = None
@@ -62,7 +64,7 @@ class SQLStore:
                         VALUES (?, ?, ?, ?, ?, ?)''' % TRIPLETABLENAME, stmts)
  
 
-    def delete(self, stmts, model = "default"):
+    def delete(self, stmts, model = DEFAULT_MODEL):
 
         hashes = [[sqlhash(s,p,o, model)] for s,p,o in stmts]
 
@@ -73,7 +75,7 @@ class SQLStore:
             self.conn.executemany('''DELETE FROM %s 
                         WHERE (hash=?)''' % TRIPLETABLENAME, hashes)
 
-    def update(self, stmts, model = "default", lifespan = 0):
+    def update(self, stmts, model = DEFAULT_MODEL, lifespan = 0):
 
         logger.warn("With SQLite store, update is strictly equivalent to " + \
                     "add (ie, no functional property check")

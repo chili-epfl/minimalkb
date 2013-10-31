@@ -4,6 +4,9 @@ DEBUG_LEVEL=logging.DEBUG
 from Queue import Queue, Empty
 import json
 
+
+DEFAULT_MODEL = "default"
+
 import shlex
 from multiprocessing import Process
 
@@ -101,7 +104,7 @@ class MinimalKB:
         self.store = SQLStore()
         #self.store = RDFlibStore()
 
-        self.models = {"myself"}
+        self.models = {DEFAULT_MODEL}
 
         apilist = [key + (" (compatibility)" if hasattr(val, "_compat") else "") for key, val in self._api.items()]
 

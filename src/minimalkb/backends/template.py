@@ -1,6 +1,8 @@
 import logging; logger = logging.getLogger("minimalKB."+__name__);
 DEBUG_LEVEL=logging.DEBUG
 
+from minimalkb.kb import DEFAULT_MODEL
+
 class TemplateBackend:
 
     def __init__(self):
@@ -11,17 +13,17 @@ class TemplateBackend:
         """
         raise NotImplementedError()
 
-    def add(self, stmts, model = "default"):
+    def add(self, stmts, model = DEFAULT_MODEL):
         """ Add the given statements to the given model.
         """
         raise NotImplementedError()
 
-    def delete(self, stmts, model = "default"):
+    def delete(self, stmts, model = DEFAULT_MODEL):
         """ remove the given statements from the given model.
         """
         raise NotImplementedError()
 
-    def update(self, stmts, model = "default"):
+    def update(self, stmts, model = DEFAULT_MODEL):
         """ Add the given statements to the given model, updating the statements
         with a functional predicate.
         """

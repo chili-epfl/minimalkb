@@ -6,6 +6,7 @@ import datetime
 import sqlite3
 
 from minimalkb.backends.sqlite import sqlhash
+from minimalkb.kb import DEFAULT_MODEL
 
 REASONER_RATE = 5 #Hz
 
@@ -49,8 +50,9 @@ class SQLiteSimpleRDFSReasoner:
 
         rdftype, subclassof = self.get_missing_taxonomy_stmts()
 
-        newstmts = [(i, "rdf:type", c, 'myself') for i,c in rdftype]
-        newstmts += [(cc, "rdfs:subClassOf", cp, 'myself') for cc,cp in subclassof]
+        #TODO: currently inferred statements are *only* added to the default model!
+        newstmts = [(i, "rdf:type", c, DEFAULT_MODEL) for i,c in rdftype]
+        newstmts += [(cc, "rdfs:subClassOf", cp, DEFAULT_MODEL) for cc,cp in subclassof]
 
         if newstmts:
             self.update_shared_db(newstmts)
