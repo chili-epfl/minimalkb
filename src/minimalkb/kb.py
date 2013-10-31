@@ -476,7 +476,7 @@ class MinimalKB:
                 clients = self.eventsubscriptions[e.id]
                 logger.info("Event %s triggered. Informing %s clients." % (e.id, len(clients)))
                 for client in clients:
-                    msg = "event\n%s\n%s\n" % (e.id, json.dumps(e.content))
+                    msg = "event\n%s\n%s\n" % (e.id, json.dumps(e.content, ensure_ascii=False).encode("utf8"))
                     self.requestresults.setdefault(client,Queue()).put(msg)
                 if not e.valid:
                     self.active_evts.discard(e)
@@ -521,7 +521,7 @@ class MinimalKB:
                     self.eventsubscriptions.setdefault(res, []).append(client)
             else:
                 res = f()
-            msg = "ok\n%s\n" % json.dumps(res) if res is not None else "ok\n"
+            msg = "ok\n%s\n" % json.dumps(res, ensure_ascii=False).encode("utf8") if res is not None else "ok\n"
         except Exception as e:
             if logger.level == logging.DEBUG:
                 traceback.print_exc()
