@@ -128,6 +128,11 @@ class MinimalKB:
     def hello(self):
         return "MinimalKB, v.%s" % __version__
 
+    @compat
+    @api
+    def stats(self):
+        return {"version": __version__}
+
     @api
     def load(self, filename):
         logger.info("Loading triples from %s" % filename)
@@ -467,6 +472,11 @@ class MinimalKB:
     def classesof(self, concept, direct = False, models = None):
         models = self.normalize_models(models)
         return self.store.classesof(concept, direct, models)
+
+    @compat
+    @api
+    def close(self):
+        pass
 
     ################################################################################
     ################################################################################
