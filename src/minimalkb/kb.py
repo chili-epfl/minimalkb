@@ -22,7 +22,8 @@ from minimalkb import __version__
 from backends.sqlite import SQLStore
 #from backends.rdflib_backend import RDFlibStore
 
-from reasoning.simple_rdfs import start_reasoner, stop_reasoner
+from services.simple_rdfs_reasoner import start_reasoner, stop_reasoner
+from services import lifespan
 
 def api(fn):
     fn._api = True
@@ -113,7 +114,7 @@ class MinimalKB:
         self.active_evts = set()
         self.eventsubscriptions = {}
 
-        self.start_reasoner()
+        self.start_services()
 
         if filename:
             self.load(filename)
@@ -416,9 +417,12 @@ class MinimalKB:
                 if not e.valid:
                     self.active_evts.discard(e)
 
-    def start_reasoner(self, *args):
+    def start_services(self, *args):
         self._reasoner = Process(target = start_reasoner, args = ('kb.db',))
         self._reasoner.start()
+
+        self._lifespan_manager = Process(target = lifespan.start_service, args = ('kb.db',))
+        self._lifespan_manager.start()
 
     def normalize_models(self, models):
         """ If 'models' is None, [] or contains 'all', then
