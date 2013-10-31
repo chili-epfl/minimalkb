@@ -90,16 +90,16 @@ class TestSequenceFunctions(unittest.TestCase):
         time.sleep(REASONING_DELAY)
         self.assertTrue('alfred rdf:type Thing' in self.kb)
 
-    def _test_lookup(self):
+    def test_lookup(self):
         self.assertItemsEqual(self.kb.lookup('alfred'), [])
 
         self.kb += ["alfred rdf:type Robot"]
-        self.assertItemsEqual(self.kb.lookup('alfred'), [('alfred', 'instance')])
+        self.assertItemsEqual(self.kb.lookup('alfred'), [['alfred', 'instance']])
+        self.assertItemsEqual(self.kb.lookup('Robot'), [['Robot', 'class']])
 
         self.kb += ["nono rdfs:label \"alfred\""]
-        self.assertItemsEqual(self.kb.lookup('alfred'), [('alfred', 'instance'), ('nono', 'unknown')])
+        self.assertItemsEqual(self.kb.lookup('alfred'), [['alfred', 'instance'], ['nono', 'undecided']])
 
-        self.assertItemsEqual(self.kb.lookup('Robot'), [('Robot', 'class')])
 
     def test_retrieval(self):
 

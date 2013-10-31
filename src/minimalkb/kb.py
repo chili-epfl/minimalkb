@@ -204,12 +204,13 @@ class MinimalKB:
     def lookup(self, resource, models = None):
         logger.info("Lookup for " + str(resource) + \
                     " in " + (str(models) if models else "any model."))
-
-        about =  self.store.about(resource, self.normalize_models(models))
+        models = self.normalize_models(models)
+        about =  self.store.about(resource, models)
         if not about:
             return []
 
-        return [(resource, "unknown")]
+        return [(resource, self.store.typeof(resource, models) )]
+
 
     @api
     def check(self, *args):

@@ -124,12 +124,53 @@ class SQLStore:
         else:
             return concept
 
+
+    def typeof(self, concept, models):
+        classes = self.classesof(concept, False, models)
+        if classes:
+            if "owl:Class" in classes:
+                return "class"
+            else:
+                return "instance"
+        if self.instancesof(concept, False, models) or \
+           self.subclassesof(concept, False, models) or \
+           self.superclassesof(concept, False, models):
+               return "class"
+        
+        if simplequery(self.conn, ("?s", concept, "?o"), models):
+            logger.warn("Currently datatype and object properties are not distinguished")
+            return "object_property"
+
+        logger.debug("Concept <%s> has undefined type." % concept)
+        return "undefined"
+
+
     def classesof(self, concept, direct, models):
         if direct:
             logger.warn("Direct classes are assumed to be the asserted is-a relations")
             return list(simplequery(self.conn, (concept, "rdf:type", "?class"), models, assertedonly = True))
         return list(simplequery(self.conn, (concept, "rdf:type", "?class"), models))
-    
+
+    def instancesof(self, concept, direct, models):
+        if direct:
+            logger.warn("Direct instances are assumed to be the asserted is-a relations")
+            return list(simplequery(self.conn, ("?instances", "rdf:type", concept), models, assertedonly = True))
+        return list(simplequery(self.conn, ("?instances", "rdf:type", concept), models))
+
+
+    def superclassesof(self, concept, direct, models):
+        if direct:
+            logger.warn("Direct super-classes are assumed to be the asserted subClassOf relations")
+            return list(simplequery(self.conn, (concept, "rdfs:subClassOf", "?superclass"), models, assertedonly = True))
+        return list(simplequery(self.conn, (concept, "rdfs:subClassOf", "?superclass"), models))
+
+    def subclassesof(self, concept, direct, models):
+        if direct:
+            logger.warn("Direct sub-classes are assumed to be the asserted subClassOf relations")
+            return list(simplequery(self.conn, ("?subclass", "rdfs:subClassOf", concept), models, assertedonly = True))
+        return list(simplequery(self.conn, ("?subclass", "rdfs:subClassOf", concept), models))
+
+
     ###################################################################################
 
     def has_stmt(self, pattern, models):
