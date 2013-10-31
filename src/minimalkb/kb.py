@@ -65,7 +65,7 @@ class Event:
 
         self.previous_instances = set()
         if type in [Event.NEW_INSTANCE, Event.NEW_INSTANCE_ONE_SHOT]:
-            instances = self.kb.store.query([self.var], self.patterns, self.models)
+            instances = self.kb.store.query([self.var], self.patterns, frozenset(self.models))
             logger.debug("Creating a NEW_INSTANCE event with initial instances %s"%instances)
             self.previous_instances = set(instances)
 
@@ -80,7 +80,7 @@ class Event:
             self.valid = False
 
         if self.type in [Event.NEW_INSTANCE, Event.NEW_INSTANCE_ONE_SHOT]:
-            instances = set(self.kb.store.query([self.var], self.patterns, self.models))
+            instances = set(self.kb.store.query([self.var], self.patterns, frozenset(self.models)))
             newinstances = instances - self.previous_instances
         
             if not newinstances:
@@ -337,8 +337,7 @@ class MinimalKB:
         Note that 'constraints' is currently not supported.
         '''
 
-        if not models:
-            models = self.models
+        models = self.normalize_models(models)
 
         patterns = [parse_stmt(p) for p in patterns]
 
@@ -381,13 +380,7 @@ class MinimalKB:
     @compat
     @api
     def getLabel(self, concept):
-        res = self.store.query(["?label"], ["%s rdfs:label ?label" % concept], self.models)
-        if not res:
-            logger.info("Found no label for %s" % concept)
-            return concept
-        else:
-            logger.info("Found label %s for %s" % (res[0], concept))
-            return res[0]
+        return self.store.label(concept)
 
     
     @compat
@@ -435,13 +428,13 @@ class MinimalKB:
         """
         if models:
             if "all" in models:
-                return self.models
+                return frozenset(self.models)
             else:
                 if isinstance(models, (str, unicode)):
                     models = [models]
                 #add to the set of all models
                 self.models = self.models | set(models)
-                return set(models)
+                return frozenset(models)
         else:
             return self.models
 

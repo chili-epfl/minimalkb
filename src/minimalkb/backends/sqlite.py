@@ -6,6 +6,7 @@ import sqlite3
 
 from sqlite_queries import query, simplequery, matchingstmt
 from minimalkb.kb import DEFAULT_MODEL
+from minimalkb.helpers import memoize
 
 
 TRIPLETABLENAME = "triples"
@@ -85,6 +86,7 @@ class SQLStore:
     def about(self, resource, models):
 
         params = {'res':resource}
+
         # workaround to feed a variable number of models
         models = list(models)
         for i in range(len(models)):
@@ -113,6 +115,14 @@ class SQLStore:
 
     def query(self, vars, patterns, models):
         return query(self.conn, vars, patterns, models)
+
+    @memoize
+    def label(self, concept, models = []):
+        labels = simplequery(self.conn, (concept, "rdfs:label", "?label"), models)
+        if labels:
+            return labels.pop()
+        else:
+            return concept
 
     def classesof(self, concept, direct, models):
         if direct:
