@@ -213,6 +213,66 @@ class MinimalKB:
 
         return [(resource, self.store.typeof(resource, models) )]
 
+    @api
+    def details(self, resource, models = None):
+        """
+        Returns a dictionary containing the following details on a given resource:
+        - 'name': resource label, if any, literal value for literals, else resource ID.
+        - 'id': resource ID or 'literal' for literals
+        - 'type': one of ['instance', 'class', 'object_property', 'datatype_property', 'undefined']
+        - 'sameAs': list of equivalent classes or instances, if any
+        - 'attributes':
+            - for classes, a list of three dictionaries:
+                {"name": "Parents","id": "superClasses", "values":[ids...]}
+                {"name": "Children","id": "subClasses", "values":[ids...]}
+                {"name": "Instances","id": "instances", "values":[ids...]}
+                (only direct super/sub-classes and instances)
+            - for instances, a list of one dictionary:
+                {"name": "Classes","id": "classes", "values":[ids...]}
+                (only direct classes)
+        """
+        models = self.normalize_models(models)
+        res = {}
+        res["name"] = self.store.label(resource, models)
+        res["id"] = resource
+        res["type"] = self.store.typeof(resource, models)
+
+        if res["type"] == "class":
+            res["attributes"] = []
+            res["attributes"].append(
+                    {"name": "Parents",
+                     "id": "superClasses", 
+                     "values":
+                        [{"id":r, "name": self.store.label(r, models)}  for r in self.store.superclassesof(resource, True, models)]
+                    })
+
+            res["attributes"].append(
+                    {"name": "Children",
+                     "id": "subClasses", 
+                     "values":
+                        [{"id":r, "name": self.store.label(r, models)}  for r in self.store.subclassesof(resource, True, models)]
+                    })
+
+            res["attributes"].append(
+                    {"name": "Instances",
+                     "id": "instances", 
+                     "values":
+                        [{"id":r, "name": self.store.label(r, models)}  for r in self.store.instancesof(resource, True, models)]
+                    })
+
+        elif res["type"] == "instance":
+            res["attributes"] = [
+                    {"name": "Classes",
+                     "id": "classes", 
+                     "values":
+                        [{"id":r, "name": self.store.label(r, models)}  for r in self.store.classesof(resource, True, models)]
+                    }]
+        return res
+
+    @compat
+    @api
+    def getResourceDetails(self, concept):
+        return self.details(concept)
 
     @api
     def check(self, *args):
