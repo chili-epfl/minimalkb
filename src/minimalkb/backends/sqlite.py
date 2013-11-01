@@ -29,6 +29,8 @@ class SQLStore:
         self.conn = sqlite3.connect('kb.db')
         self.create_kb()
 
+        self._functionalproperties = None
+
     def create_kb(self):
     
         with self.conn:
@@ -39,8 +41,9 @@ class SQLStore:
             self.conn.execute("DROP TABLE %s" % TRIPLETABLENAME)
 
         self.create_kb()
+        self.onupdate()
 
-    def add(self, stmts, model = DEFAULT_MODEL, lifespan = 0):
+    def add(self, stmts, model = DEFAULT_MODEL, lifespan = 0, replace = False):
 
         timestamp = datetime.datetime.now()
         expires = None
@@ -49,11 +52,14 @@ class SQLStore:
 
         timestamp = timestamp.isoformat()
 
+        if replace:
+            with self.conn:
+                self.conn.executemany("DELETE FROM %s WHERE subject=? AND predicate=? AND model=?" % TRIPLETABLENAME, [(s,p, model) for s,p,o in stmts])
+
         if expires:
             stmts = [[sqlhash(s,p,o, model), s, p, o, model, timestamp, expires] for s,p,o in stmts]
         else:
             stmts = [[sqlhash(s,p,o, model), s, p, o, model, timestamp] for s,p,o in stmts]
-
         with self.conn:
             if expires:
                 self.conn.executemany('''INSERT OR IGNORE INTO %s
@@ -63,7 +69,8 @@ class SQLStore:
                 self.conn.executemany('''INSERT OR IGNORE INTO %s
                         (hash, subject, predicate, object, model, timestamp)
                         VALUES (?, ?, ?, ?, ?, ?)''' % TRIPLETABLENAME, stmts)
- 
+
+        self.onupdate()
 
     def delete(self, stmts, model = DEFAULT_MODEL):
 
@@ -76,12 +83,24 @@ class SQLStore:
             self.conn.executemany('''DELETE FROM %s 
                         WHERE (hash=?)''' % TRIPLETABLENAME, hashes)
 
+        self.onupdate()
+
     def update(self, stmts, model = DEFAULT_MODEL, lifespan = 0):
 
-        logger.warn("With SQLite store, update is strictly equivalent to " + \
-                    "add (ie, no functional property check")
+        stmts_to_add = []
+        stmts_to_replace = []
+        for stmt in stmts:
+            s,p,o = stmt
+            if p in self._functionalproperties:
+                stmts_to_replace.append(stmt)
+            else:
+                stmts_to_add.append(stmt)
 
-        self.add(stmts, model, lifespan)
+        if stmts_to_add:
+            self.add(stmts_to_add, model, lifespan)
+        if stmts_to_replace:
+            logger.debug("Updating functional values: %s" % stmts_to_replace)
+            self.add(stmts_to_replace, model, lifespan, replace=True)
 
     def about(self, resource, models):
 
@@ -124,7 +143,6 @@ class SQLStore:
         else:
             return concept
 
-
     def typeof(self, concept, models):
         classes = self.classesof(concept, False, models)
         if classes:
@@ -145,26 +163,26 @@ class SQLStore:
         return "undefined"
 
 
-    def classesof(self, concept, direct, models):
+    def classesof(self, concept, direct, models = []):
         if direct:
             logger.warn("Direct classes are assumed to be the asserted is-a relations")
             return list(simplequery(self.conn, (concept, "rdf:type", "?class"), models, assertedonly = True))
         return list(simplequery(self.conn, (concept, "rdf:type", "?class"), models))
 
-    def instancesof(self, concept, direct, models):
+    def instancesof(self, concept, direct, models = []):
         if direct:
             logger.warn("Direct instances are assumed to be the asserted is-a relations")
             return list(simplequery(self.conn, ("?instances", "rdf:type", concept), models, assertedonly = True))
         return list(simplequery(self.conn, ("?instances", "rdf:type", concept), models))
 
 
-    def superclassesof(self, concept, direct, models):
+    def superclassesof(self, concept, direct, models = []):
         if direct:
             logger.warn("Direct super-classes are assumed to be the asserted subClassOf relations")
             return list(simplequery(self.conn, (concept, "rdfs:subClassOf", "?superclass"), models, assertedonly = True))
         return list(simplequery(self.conn, (concept, "rdfs:subClassOf", "?superclass"), models))
 
-    def subclassesof(self, concept, direct, models):
+    def subclassesof(self, concept, direct, models = []):
         if direct:
             logger.warn("Direct sub-classes are assumed to be the asserted subClassOf relations")
             return list(simplequery(self.conn, ("?subclass", "rdfs:subClassOf", concept), models, assertedonly = True))
@@ -172,6 +190,9 @@ class SQLStore:
 
 
     ###################################################################################
+
+    def onupdate(self):
+        self._functionalproperties = frozenset(self.instancesof('owl:FunctionalProperty', False))
 
     def has_stmt(self, pattern, models):
         """ Returns True if the given statment exist in
