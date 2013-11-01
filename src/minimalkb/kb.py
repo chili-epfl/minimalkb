@@ -3,7 +3,7 @@ DEBUG_LEVEL=logging.DEBUG
 
 from Queue import Queue, Empty
 import json
-
+import traceback
 
 DEFAULT_MODEL = "default"
 
@@ -533,8 +533,7 @@ class MinimalKB:
                 res = f()
             msg = "ok\n%s\n" % json.dumps(res, ensure_ascii=False).encode("utf8") if res is not None else "ok\n"
         except Exception as e:
-            if logger.level == logging.DEBUG:
-                traceback.print_exc()
+            logger.debug(traceback.format_exc())
             logger.error("Request failed: %s" % e)
             msg = "error\nKbError\n%s\n" % str(e)
 

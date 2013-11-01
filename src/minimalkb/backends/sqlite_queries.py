@@ -92,6 +92,15 @@ def query(db, vars, patterns, models):
 
 
 def singlepattern(db, pattern, models):
+    """ Returns the list of statements that match
+    a single pattern (like "* likes ?toto").
+
+    If only one unbound variable is present, it returns
+    the list of possible values for this variable.
+
+    If 2 or 3 tokens are unbound, it returns a list of
+    complete statments (s,p,o).
+    """
     if nb_variables(pattern) == 1:
         return list(simplequery(db, pattern, models))
     else:
