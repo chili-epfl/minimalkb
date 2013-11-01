@@ -57,7 +57,7 @@ class Event:
 
         self.id =  "evt_" + str(hash(self.type + \
                     self.trigger + \
-                    self.var if self.var else "" + \
+                    (self.var if self.var else "") + \
                     str(sorted(self.patterns)) + \
                     str(sorted(self.models))))
 

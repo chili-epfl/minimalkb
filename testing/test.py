@@ -97,6 +97,9 @@ class TestSequenceFunctions(unittest.TestCase):
         self.assertItemsEqual(self.kb.lookup('alfred'), [['alfred', 'instance']])
         self.assertItemsEqual(self.kb.lookup('Robot'), [['Robot', 'class']])
 
+        self.kb += ["alfred likes icecream"]
+        self.assertItemsEqual(self.kb.lookup('likes'), [['likes', 'object_property']])
+
         self.kb += ["nono rdfs:label \"alfred\""]
         self.assertItemsEqual(self.kb.lookup('alfred'), [['alfred', 'instance'], ['nono', 'undecided']])
 
@@ -122,7 +125,7 @@ class TestSequenceFunctions(unittest.TestCase):
                               ['johnny'])
 
 
-    def _test_complex_queries(self):
+    def test_complex_queries(self):
         self.assertItemsEqual(self.kb["?agent rdf:type Robot", "?agent desires ?obj"], [])
 
         self.kb += ["nono rdf:type Human", "alfred rdf:type Robot"]
@@ -140,7 +143,7 @@ class TestSequenceFunctions(unittest.TestCase):
         self.assertItemsEqual(self.kb["?agent desires ?act", "?act rdf:type Action"], [{"agent":"nono", "act":"jump"}])
         self.assertItemsEqual(self.kb["?agent desires ?obj"], [{"agent":"alfred", "obj":"oil"}, {"agent":"nono", "obj":"jump"}])
 
-    def _test_update(self):
+    def test_update(self):
         self.kb += ["nono isNice true", "isNice rdf:type owl:FunctionalProperty"]
         self.assertItemsEqual(self.kb["* isNice true"], ['nono'])
 
@@ -159,7 +162,7 @@ class TestSequenceFunctions(unittest.TestCase):
             print("In callback. Got evt %s" % evt)
             eventtriggered[0] = True
 
-        self.kb.subscribe(["?o isIn room"], onevent)
+        evtid = self.kb.subscribe(["?o isIn room"], onevent)
 
         # should not trigger an event
         self.kb += ["alfred isIn garage"]
@@ -180,7 +183,8 @@ class TestSequenceFunctions(unittest.TestCase):
         self.assertFalse(eventtriggered[0])
 
         # alfred is already in garage, should not fire an event
-        self.kb.subscribe(["?o isIn garage"], onevent)
+        evtid2 = self.kb.subscribe(["?o isIn garage"], onevent)
+        self.assertFalse(evtid == evtid2)
         time.sleep(0.1)
         self.assertFalse(eventtriggered[0])
 
