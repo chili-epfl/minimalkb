@@ -8,7 +8,7 @@ from distutils.core import setup
 execfile('src/minimalkb/__init__.py')
 
 def readme():
-    with open('README.md') as f:
+    with open('README.rst') as f:
         return f.read()
 
 setup(name='minimalKB',
@@ -23,7 +23,7 @@ setup(name='minimalKB',
       author='Séverin Lemaignan',
       author_email='severin.lemaignan@epfl.ch',
       url='https://github.com/severin-lemaignan/minimalkb',
-      install_requires=['sqlite3'],
+      requires=['pysqlite', 'rdflib'],
       package_dir = {'': 'src'},
       packages=['minimalkb', 'minimalkb/backends', 'minimalkb/services'],
       scripts=['bin/minimalkb'],
