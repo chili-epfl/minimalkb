@@ -193,6 +193,31 @@ class TestSequenceFunctions(unittest.TestCase):
         time.sleep(0.1)
         self.assertTrue(eventtriggered[0])
 
+    def test_events_multiclients(self):
+
+        with kb.KB() as kb2:
+
+            eventtriggered = [False]
+
+            def onevent(evt):
+                #py3 only! -> workaround is turning eventtriggered into a list
+                #nonlocal eventtriggered
+                print("In callback. Got evt %s" % evt)
+                eventtriggered[0] = True
+
+            self.kb.subscribe(["?o isIn room"], onevent)
+
+            # should not trigger an event
+            kb2 += ["alfred isIn garage"]
+            time.sleep(0.1)
+            self.assertFalse(eventtriggered[0])
+
+
+            # should trigger an event
+            kb2 += ["alfred isIn room"]
+            time.sleep(0.1)
+            self.assertTrue(eventtriggered[0])
+
     def test_polled_events(self):
 
         evtid = self.kb.subscribe(["?o isIn room"])
