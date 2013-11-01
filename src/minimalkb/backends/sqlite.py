@@ -143,10 +143,15 @@ class SQLStore:
         else:
             return concept
 
+    @memoize
     def typeof(self, concept, models):
         classes = self.classesof(concept, False, models)
         if classes:
-            if "owl:Class" in classes:
+            if "owl:ObjectProperty" in classes:
+                return "object_property"
+            elif "owl:DatatypeProperty" in classes:
+                return "datatype_property"
+            elif "owl:Class" in classes:
                 return "class"
             else:
                 return "instance"
@@ -155,11 +160,11 @@ class SQLStore:
            self.superclassesof(concept, False, models):
                return "class"
         
-        if simplequery(self.conn, ("?s", concept, "?o"), models):
-            logger.warn("Currently datatype and object properties are not distinguished")
-            return "object_property"
+        if matchingstmt(self.conn, ("?s", concept, "?o"), models):
+            logger.warn("Could not distinguish between datatype and object property. Returning 'property' as type.")
+            return "property"
 
-        logger.debug("Concept <%s> has undefined type." % concept)
+        logger.warn("Concept <%s> has undefined type." % concept)
         return "undefined"
 
 
