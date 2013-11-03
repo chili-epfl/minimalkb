@@ -473,11 +473,6 @@ class MinimalKB:
         models = self.normalize_models(models)
         return self.store.classesof(concept, direct, models)
 
-    @compat
-    @api
-    def close(self):
-        pass
-
     ################################################################################
     ################################################################################
     def onupdate(self):
