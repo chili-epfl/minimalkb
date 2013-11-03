@@ -120,6 +120,11 @@ def is_variable(tok):
 
 
 def matchingstmt(db, pattern, models = [], assertedonly = False):
+    """Returns the list of statements matching a given pattern.
+
+    If assertedonly is True, statements infered by reasoning are 
+    excluded.
+    """
 
     s,p,o = pattern
     params = {'s':s,
