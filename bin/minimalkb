@@ -48,10 +48,10 @@ class MinimalKBChannel(asynchat.async_chat):
         logger.debug("Got request:" + self.data )
         request, args = self.parse_request(self.data)
         self.data = ""
+        self.kb.submitrequest(self, request, *args)
+
         if request == "close":
             self.close_when_done()
-        else:
-            self.kb.submitrequest(self, request, *args)
 
     def sendmsg(self, msg):
         status, res = msg

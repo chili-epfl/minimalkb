@@ -501,6 +501,13 @@ class MinimalKB:
         self._lifespan_manager = Process(target = lifespan.start_service, args = ('kb.db',))
         self._lifespan_manager.start()
 
+    def stop_services(self):
+        self._reasoner.terminate()
+        self._lifespan_manager.terminate()
+
+        self._reasoner.join()
+        self._lifespan_manager.join()
+
     def normalize_models(self, models):
         """ If 'models' is None, [] or contains 'all', then
         returns the set of all models known to the KB.
@@ -520,6 +527,12 @@ class MinimalKB:
             return self.models
 
     def execute(self, client, name, *args):
+
+        if name == "close":
+            logger.info("Closing the knowledge base.")
+            self.stop_services()
+            return
+
         f = getattr(self, name)
         if hasattr(f, "_compat"):
                 logger.warn("Using non-standard method %s. This may be " % f.__name__ + \
