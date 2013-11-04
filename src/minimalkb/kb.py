@@ -473,6 +473,14 @@ class MinimalKB:
         models = self.normalize_models(models)
         return self.store.classesof(concept, direct, models)
 
+    @api
+    def close(self):
+        """ This code should actually never be called: the 'close' request
+        is intercepted at the front-end level (eg, socket server) to close
+        the connection.
+        """
+        raise NotImplementedError
+
     ################################################################################
     ################################################################################
     def onupdate(self):
