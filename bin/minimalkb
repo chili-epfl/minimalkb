@@ -54,8 +54,20 @@ class MinimalKBChannel(asynchat.async_chat):
             self.kb.submitrequest(self, request, *args)
 
     def sendmsg(self, msg):
-        logger.debug("Sent message:" + msg)
-        self.push(msg + "#end#\n")
+        status, res = msg
+
+        raw = ""
+        if status == "ok":
+            raw = "ok\n%s\n" % json.dumps(res, ensure_ascii=False).encode("utf8") if res is not None else "ok\n"
+        elif status == "error":
+            raw = "error\nkberror\n%s\n" % str(res)
+        elif status == "event":
+            raw = "event\n%s\n%s\n" % (res.id, json.dumps(res.content, ensure_ascii=False).encode("utf8"))
+        else:
+            raise RuntimeError("Unexpected message status: %s" % status)
+
+        logger.debug("Sent message:" + raw)
+        self.push(raw + "#end#\n")
 
 
 class MinimalKBServer(asyncore.dispatcher):
