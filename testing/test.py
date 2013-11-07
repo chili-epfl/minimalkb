@@ -37,6 +37,14 @@ class TestSequenceFunctions(unittest.TestCase):
         self.kb.retract(["alfred rdf:type Human", "alfred likes icecream"])
         self.kb -= ["johnny rdf:type Human"]
 
+        self.kb.revise(["toto likes tata"], {"method":"add"})
+
+    def test_basic_kwargs(self):
+
+        self.kb.revise(["toto likes tata"], policy={"method":"add"})
+        self.kb.add(["johnny rdf:type Human"], lifespan = 10)
+
+
     def test_modifications(self):
 
         self.assertFalse(self.kb["* * *"])

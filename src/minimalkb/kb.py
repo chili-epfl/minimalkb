@@ -526,7 +526,7 @@ class MinimalKB:
         else:
             return self.models
 
-    def execute(self, client, name, *args):
+    def execute(self, client, name, *args, **kwargs):
 
         if name == "close":
             logger.info("Closing the knowledge base.")
@@ -541,8 +541,8 @@ class MinimalKB:
         msg = None
         try:
             res = None
-            if args:
-                res = f(*args)
+            if args or kwargs:
+                res = f(*args, **kwargs)
                 if name=="subscribe":
                     self.eventsubscriptions.setdefault(res, []).append(client)
             else:
@@ -555,14 +555,17 @@ class MinimalKB:
 
         self.requestresults.setdefault(client,Queue()).put(msg)
 
-    def submitrequest(self, client, name, *args):
-        self.incomingrequests.put((client, name, args))
+    def submitrequest(self, client, name, *args, **kwargs):
+        self.incomingrequests.put((client, name, args, kwargs))
 
     def process(self):
         try:
-            client, name, args = self.incomingrequests.get(True, 0.05)
-            logger.debug("Processing now %s%s" %(name, str(args)))
-            self.execute(client, name, *args)
+            client, name, args, kwargs = self.incomingrequests.get(True, 0.05)
+            logger.debug("Processing <%s(%s,%s)>..." % \
+                            (name, 
+                             ", ".join([str(a) for a in args]),
+                             ", ".join(str(k)+"="+str(v) for k,v in kwargs.items())))
+            self.execute(client, name, *args, **kwargs)
         except Empty:
             pass
 

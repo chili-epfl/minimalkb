@@ -30,7 +30,7 @@ class MinimalKBChannel(asynchat.async_chat):
     def parse_request(self, req):
         tokens = [a.strip() for a in req.strip().split("\n")]
         if len(tokens) == 1:
-            return tokens[0], []
+            return tokens[0], [], {}
         else:
             args = []
             for t in tokens[1:]:
@@ -38,7 +38,13 @@ class MinimalKBChannel(asynchat.async_chat):
                     args.append(json.loads(t))
                 except ValueError:
                     logger.error("Invalid arguments for <%s>: %s. Valid JSON was expected."%(tokens[0], t))
-            return tokens[0], args
+
+            if isinstance(args[-1], dict) and "kwargs" in args[-1]:
+                kwargs = args[-1]["kwargs"]
+                args = args[:-1]
+            else:
+                kwargs = {}
+            return tokens[0], args, kwargs
 
     def collect_incoming_data(self, data):
         self.data = self.data + data
@@ -46,9 +52,9 @@ class MinimalKBChannel(asynchat.async_chat):
     def found_terminator(self):
 
         logger.debug("Got request:" + self.data )
-        request, args = self.parse_request(self.data)
+        request, args, kwargs = self.parse_request(self.data)
         self.data = ""
-        self.kb.submitrequest(self, request, *args)
+        self.kb.submitrequest(self, request, *args, **kwargs)
 
         if request == "close":
             self.close_when_done()
