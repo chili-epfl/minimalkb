@@ -18,7 +18,6 @@ class SQLiteLifespanManager:
     ####################################################################
     ####################################################################
     def clean(self):
-
         starttime = time.time()
 
         timestamp = datetime.datetime.now().isoformat()
@@ -34,7 +33,7 @@ class SQLiteLifespanManager:
                                     stmts_to_remove)
 
 
-            logger.debug("Cleaning %s stmts (took %fsec)." % (len(stmts_to_remove), time.time() - starttime))
+            logger.info("Cleaning %s stmts (took %fsec)." % (len(stmts_to_remove), time.time() - starttime))
 
     def __call__(self, *args):
 

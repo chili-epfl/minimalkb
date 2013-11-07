@@ -529,8 +529,7 @@ class MinimalKB:
     def execute(self, client, name, *args, **kwargs):
 
         if name == "close":
-            logger.info("Closing the knowledge base.")
-            self.stop_services()
+            logger.info("Closing connection to client.")
             return
 
         f = getattr(self, name)

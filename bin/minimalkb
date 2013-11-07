@@ -136,4 +136,5 @@ if __name__ == '__main__':
             asyncore.loop(count = 1)
             kb.process()
     except KeyboardInterrupt:
+        kb.stop_services()
         logger.info("Bye bye")
