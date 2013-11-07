@@ -317,7 +317,7 @@ class MinimalKB:
             lifespan = policy.get('lifespan', 0)
 
             logger.info("Adding to " + str(list(models)) + ":\n\t- " + "\n\t- ".join([str(s) for s in stmts]) + \
-                    " (lifespan: %ssec)"%lifespan if lifespan else "")
+                    (" (lifespan: %ssec)"%lifespan if lifespan else ""))
             for model in models:
                 self.store.add(stmts, model, lifespan=lifespan)
 
@@ -331,7 +331,7 @@ class MinimalKB:
             lifespan = policy.get('lifespan', 0)
             
             logger.info("Updating " + str(list(models)) + " with:\n\t- " + "\n\t- ".join([str(s) for s in stmts]) + \
-                    " (lifespan: %ssec)"%lifespan if lifespan else "")
+                    (" (lifespan: %ssec)"%lifespan if lifespan else ""))
             for model in models:
                 self.store.update(stmts, model, lifespan=lifespan)
 
