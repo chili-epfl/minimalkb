@@ -29,7 +29,7 @@ class SQLStore:
         self.conn = sqlite3.connect('kb.db')
         self.create_kb()
 
-        self._functionalproperties = None
+        self._functionalproperties = frozenset()
 
     def create_kb(self):
     
