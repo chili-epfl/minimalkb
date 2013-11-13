@@ -1,5 +1,4 @@
 import logging; logger = logging.getLogger("minimalKB."+__name__);
-DEBUG_LEVEL=logging.DEBUG
 
 from Queue import Queue, Empty
 import json
