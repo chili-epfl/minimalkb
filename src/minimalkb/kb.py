@@ -83,12 +83,16 @@ class Event:
         if self.type in [Event.NEW_INSTANCE, Event.NEW_INSTANCE_ONE_SHOT]:
             instances = set(self.kb.store.query([self.var], self.patterns, frozenset(self.models)))
             newinstances = instances - self.previous_instances
-        
+
+            # previous_instances must be set to the current set of matching instance
+            # else we won't trigger events when an instance disappear and 
+            # re-appear later.
+            self.previous_instances = instances
+
             if not newinstances:
                 return False
 
             self.content = [i for i in newinstances] # for some reason, calling list() does not work
-            self.previous_instances = self.previous_instances | instances
             return True
 
 
