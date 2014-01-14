@@ -35,18 +35,34 @@ Run `minimalkb --help` for available options.
 Features
 --------
 
+### Server-Client or embedded
+
+`minimalKB` can be run as a stand-alone (socket) server, or directly embedded
+in Python applications.
+
 ### Multi-models
 
-The `minimalKB` is intended for dynamic environments, with possibly several
+`minimalKB` is intended for dynamic environments, with possibly several
 contexts/agents requiring separate knowledge models.
 
 New models can be created at any time and each operation (like knowledge
 addition/retractation/query) can operate on a specific subset of models.
 
+### Event system
+
+`minimalKB` provides a mechanism to *subscribe* to some conditions (like: an
+instance of a given type is added to the knowledge base, some statement becomes
+true, etc.) and get notified back.
+
 ### Reasoning
 
-`minimalKB` only provides basic RDFS reasoning capabilities: it honors the
-transitive closure of the `rdfs:subClassOf` relation.
+`minimalKB` only provides basic RDFS/OWL reasoning capabilities:
+
+- it honors the transitive closure of the `rdfs:subClassOf` relation.
+- functional predicates (child of `owl:functionalProperty`) are properly
+  handled when updating the model (ie, if `<S P O>` is asserted with `P` a
+  functional predicate, updating the model with `<S P O'>` will first cause `<S
+  P O>` to be retracted).
 
 The reasoner runs in its own thread, and classify the model at a given rate, by
 default 5Hz. It is thus needed to wait ~200ms before the results of the
