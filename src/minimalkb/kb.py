@@ -556,7 +556,7 @@ class MinimalKB:
             res = None
             if args or kwargs:
                 res = f(*args, **kwargs)
-                if name=="subscribe":
+                if name in ["subscribe", "registerEvent"]:
                     self.eventsubscriptions.setdefault(res, []).append(client)
             else:
                 res = f()
