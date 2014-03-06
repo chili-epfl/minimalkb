@@ -48,10 +48,21 @@ class Event:
 
     def __init__(self, kb, type, trigger, var, patterns, models):
         self.kb = kb
-        self.type = type
+
+        if type == Event.NEW_CLASS_INSTANCE:
+            self.type = Event.NEW_INSTANCE
+            self.var = "?instance"
+            self.patterns = [parse_stmt("?instance rdf:type %s" % klass[0]) for klass in patterns]
+        elif type == Event.NEW_CLASS_INSTANCE_ONE_SHOT:
+            self.type = Event.NEW_INSTANCE_ONE_SHOT
+            self.var = "?instance"
+            self.patterns = [parse_stmt("?instance rdf:type %s" % klass[0]) for klass in patterns]
+         else:
+            self.type = type
+            self.var = var
+            self.patterns = patterns
+
         self.trigger = trigger
-        self.var = var
-        self.patterns = patterns
         self.models = models
 
         self.id =  "evt_" + str(hash(self.type + \
