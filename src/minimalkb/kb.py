@@ -57,7 +57,7 @@ class Event:
             self.type = Event.NEW_INSTANCE_ONE_SHOT
             self.var = "?instance"
             self.patterns = [parse_stmt("?instance rdf:type %s" % klass[0]) for klass in patterns]
-         else:
+        else:
             self.type = type
             self.var = var
             self.patterns = patterns
