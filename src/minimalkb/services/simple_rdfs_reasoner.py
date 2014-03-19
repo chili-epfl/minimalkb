@@ -26,6 +26,8 @@ class OntoClass:
 
 class SQLiteSimpleRDFSReasoner:
 
+    SYMMETRIC_PREDICATES = {"owl:differentFrom", "owl:sameAs", "owl:disjointWith"}
+
     def __init__(self, database = "kb.db"):
         self.db = sqlite3.connect(':memory:') # create a memory database
         self.shareddb = sqlite3.connect(database)
@@ -59,7 +61,13 @@ class SQLiteSimpleRDFSReasoner:
             newstmts += [(i, "rdf:type", c, model) for i,c in rdftype]
             newstmts += [(cc, "rdfs:subClassOf", cp, model) for cc,cp in subclassof]
 
+            newstmts += self.symmetric_statements(model)
+
+
         if newstmts:
+            logger.debug("Reasoner added new statements to the knowledge base:\n -" +\
+                         "\n - ".join(["%s %s %s (in %s)" % stmt for stmt in newstmts]))
+
             self.update_shared_db(newstmts)
 
             logger.info("Classification took %fsec." % (time.time() - starttime))
@@ -141,6 +149,18 @@ class SQLiteSimpleRDFSReasoner:
         newrdftype -= rdftype
         newsubclassof -= subclassof
         return newrdftype, newsubclassof
+
+    def symmetric_statements(self, model):
+
+
+        with self.db:
+            stmts = {(row[0], row[1], row[2], model) for row in self.db.execute(
+                    '''SELECT subject, predicate, object FROM triples 
+                        WHERE (predicate IN ('%s') AND model=?)
+                        ''' % "', '".join(self.SYMMETRIC_PREDICATES), [model])}
+
+        return {(o, p, s, m) for s, p, o, m in stmts} - stmts # so we keep only the new symmetrical statements
+
 
 
 
