@@ -45,21 +45,28 @@ class SQLiteSimpleRDFSReasoner:
     ####################################################################
     def classify(self):
 
+
         starttime = time.time()
         self.copydb()
 
-        rdftype, subclassof = self.get_missing_taxonomy_stmts()
+        models = self.get_models()
+        newstmts = []
 
-        #TODO: currently inferred statements are *only* added to the default model!
-        newstmts = [(i, "rdf:type", c, DEFAULT_MODEL) for i,c in rdftype]
-        newstmts += [(cc, "rdfs:subClassOf", cp, DEFAULT_MODEL) for cc,cp in subclassof]
+        for model in models:
+            rdftype, subclassof = self.get_missing_taxonomy_stmts(model)
+
+            newstmts += [(i, "rdf:type", c, model) for i,c in rdftype]
+            newstmts += [(cc, "rdfs:subClassOf", cp, model) for cc,cp in subclassof]
 
         if newstmts:
             self.update_shared_db(newstmts)
 
             logger.info("Classification took %fsec." % (time.time() - starttime))
 
-    def get_onto(self, db):
+    def get_models(self):
+        return [row[0] for row in self.db.execute("SELECT DISTINCT model FROM triples")]
+
+    def get_onto(self, db, model = DEFAULT_MODEL):
 
         onto = {}
 
@@ -68,12 +75,12 @@ class SQLiteSimpleRDFSReasoner:
         with db:
             rdftype = {(row[0], row[1]) for row in db.execute(
                     '''SELECT subject, object FROM triples 
-                       WHERE (predicate='rdf:type')
-                    ''')}
+                       WHERE (predicate='rdf:type' AND model=?)
+                    ''', [model])}
             subclassof = {(row[0], row[1]) for row in db.execute(
                     '''SELECT subject, object FROM triples 
-                       WHERE (predicate='rdfs:subClassOf')
-                    ''')}
+                       WHERE (predicate='rdfs:subClassOf' AND model=?)
+                    ''', [model])}
 
         for cc, cp in subclassof:
             parent = onto.setdefault(cp, OntoClass(cp))
@@ -86,9 +93,9 @@ class SQLiteSimpleRDFSReasoner:
 
         return onto, rdftype, subclassof
 
-    def get_missing_taxonomy_stmts(self):
+    def get_missing_taxonomy_stmts(self, model = DEFAULT_MODEL):
 
-        onto, rdftype, subclassof = self.get_onto(self.db)
+        onto, rdftype, subclassof = self.get_onto(self.db, model)
 
         newrdftype = set()
         newsubclassof = set()
