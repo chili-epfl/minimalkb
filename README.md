@@ -48,6 +48,8 @@ contexts/agents requiring separate knowledge models.
 New models can be created at any time and each operation (like knowledge
 addition/retractation/query) can operate on a specific subset of models.
 
+Each models are also independently classified by the reasoner.
+
 ### Event system
 
 `minimalKB` provides a mechanism to *subscribe* to some conditions (like: an
@@ -63,6 +65,7 @@ true, etc.) and get notified back.
   handled when updating the model (ie, if `<S P O>` is asserted with `P` a
   functional predicate, updating the model with `<S P O'>` will first cause `<S
   P O>` to be retracted).
+- `owl:equivalentClass` is properly handled.
 
 The reasoner runs in its own thread, and classify the model at a given rate, by
 default 5Hz. It is thus needed to wait ~200ms before the results of the

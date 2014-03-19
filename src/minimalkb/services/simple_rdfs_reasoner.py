@@ -16,6 +16,7 @@ class OntoClass:
         self.parents = set()
         self.children = set()
         self.instances = set()
+        self.equivalents = set()
 
     def __repr__(self):
         return self.name + \
@@ -64,7 +65,8 @@ class SQLiteSimpleRDFSReasoner:
             logger.info("Classification took %fsec." % (time.time() - starttime))
 
     def get_models(self):
-        return [row[0] for row in self.db.execute("SELECT DISTINCT model FROM triples")]
+        with self.db:
+            return [row[0] for row in self.db.execute("SELECT DISTINCT model FROM triples")]
 
     def get_onto(self, db, model = DEFAULT_MODEL):
 
@@ -72,6 +74,7 @@ class SQLiteSimpleRDFSReasoner:
 
         rdftype = None
         subclassof = None
+        equivalentclasses = None
         with db:
             rdftype = {(row[0], row[1]) for row in db.execute(
                     '''SELECT subject, object FROM triples 
@@ -81,6 +84,11 @@ class SQLiteSimpleRDFSReasoner:
                     '''SELECT subject, object FROM triples 
                        WHERE (predicate='rdfs:subClassOf' AND model=?)
                     ''', [model])}
+            equivalentclasses = {(row[0], row[1]) for row in db.execute(
+                    '''SELECT subject, object FROM triples 
+                       WHERE (predicate='owl:equivalentClass' AND model=?)
+                    ''', [model])}
+
 
         for cc, cp in subclassof:
             parent = onto.setdefault(cp, OntoClass(cp))
@@ -90,6 +98,13 @@ class SQLiteSimpleRDFSReasoner:
 
         for i, c in rdftype:
             onto.setdefault(c, OntoClass(c)).instances.add(i)
+
+        for ec1, ec2 in equivalentclasses:
+            equi1 = onto.setdefault(ec1, OntoClass(ec1))
+            equi2 = onto.setdefault(ec2, OntoClass(ec2))
+            equi1.equivalents.add(equi2)
+            equi2.equivalents.add(equi1)
+
 
         return onto, rdftype, subclassof
 
@@ -115,6 +130,13 @@ class SQLiteSimpleRDFSReasoner:
                 addinstance(i, cls)
             for p in cls.parents:
                 addsubclassof(cls, p)
+
+            for equivalent in cls.equivalents:
+                for i in cls.instances:
+                    addinstance(i, equivalent)
+                for p in cls.parents:
+                    addsubclassof(equivalent, p)
+
 
         newrdftype -= rdftype
         newsubclassof -= subclassof
