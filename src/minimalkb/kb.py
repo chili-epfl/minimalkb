@@ -36,7 +36,13 @@ def compat(fn):
     return fn
 
 def parse_stmt(stmt):
-    return tuple(shlex.split(stmt.encode('utf8')))
+
+    tokens = stmt.split()
+    if len(tokens) < 3:
+        logger.error("Error while parsing the statement: %s. Only 2 tokens found" % stmt)
+        raise RuntimeError("Malformed statement <%s>" % stmt)
+
+    return tokens[0], tokens[1], " ".join(tokens[2:])
 
 
 class Event:

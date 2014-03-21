@@ -111,6 +111,53 @@ class TestSequenceFunctions(unittest.TestCase):
         self.kb += ["nono rdfs:label \"alfred\""]
         self.assertItemsEqual(self.kb.lookup('alfred'), [['alfred', 'instance'], ['nono', 'undecided']])
 
+    def test_literals(self):
+
+        literals = ['\"test\"',
+                    '\"\"\"test\"\"\"',
+                    '\"\"\"toto\ntata\"\"\"',
+                    '\"test\"@fr',
+                    '\"foo\"^^<http://example.org/my/datatype>',
+                    '\"\"\"10\"\"\"^^xsd:decimal',
+                    '-5',
+                    '0',
+                    '1',
+                    '10',
+                    '+1',
+                    '\"-5\"^^xsd:integer',
+                    '\"10\"^^<http://www.w3.org/2001/XMLSchema#integer>',
+                    '1.3e2',
+                    '10e0',
+                    '-12.5e10',
+                    '\"1.3e2\"^^xsd:double',
+                    '\"-12.5e10\"^^<http://www.w3.org/2001/XMLSchema#double>',
+                    '0.0',
+                    '1.0',
+                    '1.234567890123456789',
+                    '-5.0',
+                    '\"0.0\"^^xsd:decimal',
+                    '\"-5.0\"^^<http://www.w3.org/2001/XMLSchema#decimal>',
+                    'true',
+                    'false',
+                    '\"true\"^^xsd:boolean',
+                    '\"false\"^^<http://www.w3.org/2001/XMLSchema#boolean>']
+
+        malformed = ["'test'",
+                     '\"toto\ntata\"']
+
+        objects = ["test", "False", "True"]
+
+        for i, val in enumerate(literals):
+            self.kb += ["robert rel%s %s" % (i, val)]
+            self.assertItemsEqual(self.kb.lookup('rel%s'%i), [['rel%s' % i, 'datatype_property']])
+
+        for i, val in enumerate(objects):
+            self.kb += ["robert relobj%s %s" % (i, val)]
+            self.assertItemsEqual(self.kb.lookup('relobj%s'%i), [['relobj%s' % i, 'object_property']])
+ 
+        #for val in malformed:
+        #    with self.assertRaises():
+        #        self.kb += ["robert rel%s %s" % (i, val)]
 
     def test_retrieval(self):
 

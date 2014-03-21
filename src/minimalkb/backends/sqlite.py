@@ -8,7 +8,6 @@ from sqlite_queries import query, simplequery, matchingstmt
 from minimalkb.kb import DEFAULT_MODEL
 from minimalkb.helpers import memoize
 
-
 TRIPLETABLENAME = "triples"
 TRIPLETABLE = '''CREATE TABLE IF NOT EXISTS %s
                     ("hash" INTEGER PRIMARY KEY NOT NULL  UNIQUE , 
@@ -114,8 +113,8 @@ class SQLStore:
         query = '''
                 SELECT subject, predicate, object 
                 FROM %s
-                WHERE (subject=:res OR predicate=:res OR object=:res)
-                AND model IN (%s)''' % (TRIPLETABLENAME, ",".join([":m%s" % i for i in range(len(models))]))
+                WHERE (subject=:res OR predicate=:res OR object IN ('"%s"',:res)
+                AND model IN (%s))''' % (TRIPLETABLENAME, resource, ",".join([":m%s" % i for i in range(len(models))]))
         with self.conn:
             res = self.conn.execute(query, params)
             return [[row[0], row[1], row[2]] for row in res]
@@ -153,6 +152,8 @@ class SQLStore:
                 return "datatype_property"
             elif "owl:Class" in classes:
                 return "class"
+            elif self.is_literal(concept):
+                return "literal"
             else:
                 return "instance"
         if self.instancesof(concept, False, models) or \
@@ -160,9 +161,12 @@ class SQLStore:
            self.superclassesof(concept, False, models):
                return "class"
         
-        if matchingstmt(self.conn, ("?s", concept, "?o"), models):
-            logger.warn("Could not distinguish between datatype and object property. Returning 'property' as type.")
-            return "property"
+        stmts_if_predicate = matchingstmt(self.conn, ("?s", concept, "?o"), models)
+        if stmts_if_predicate:
+            if self.is_literal(stmts_if_predicate[0][3]):
+                return "datatype_property"
+            else:
+                return "object_property"
 
         logger.warn("Concept <%s> has undefined type." % concept)
         return "undefined"
@@ -211,6 +215,30 @@ class SQLStore:
                 return True
 
         return False
+
+    @memoize
+    def is_literal(self, atom):
+        """ The definition of a literal follows the Turtle grammar:
+        http://www.w3.org/TeamSubmission/turtle/#literal
+        """
+        if atom in ["true", "false"]: # only lower-case!
+            return True
+        if atom[0] in ["\"", "'"] and atom[-1] in ["\"", "'"]:
+            return True
+        try:
+            float(atom) # test for integer, double, decimal
+            return True
+        except ValueError:
+            pass
+
+        if "@" in atom: # langague tag
+            return True
+
+        if "^^" in atom: # covers all XSD datatypes in Turtle syntax
+            return True
+
+        return False
+
 
 def get_vars(s):
     return [x for x in s if x.startswith('?')]
